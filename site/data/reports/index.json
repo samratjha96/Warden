@@ -1,0 +1,38 @@
+{
+    "reports": [
+        {
+            "id": "openclaw-openclaw-975c9f4",
+            "owner": "openclaw",
+            "repo": "openclaw",
+            "commit": "975c9f4",
+            "analyzed": "2026-02-25",
+            "ecosystem": "Node · pnpm",
+            "risk": "high",
+            "verdict": "reject",
+            "keyFinding": "eval() + curl|bash install path"
+        },
+        {
+            "id": "facebook-react-3c9d818",
+            "owner": "facebook",
+            "repo": "react",
+            "commit": "3c9d818",
+            "analyzed": "2026-02-22",
+            "ecosystem": "JS · npm",
+            "risk": "low",
+            "verdict": "approve",
+            "keyFinding": "No deceptive patterns found"
+        },
+        {
+            "id": "lodash-lodash-af44d97",
+            "owner": "lodash",
+            "repo": "lodash",
+            "commit": "af44d97",
+            "analyzed": "2026-02-21",
+            "ecosystem": "JS · npm",
+            "risk": "medium",
+            "verdict": "conditional",
+            "keyFinding": "2 transitive dep vulnerabilities"
+        }
+    ],
+    "lastUpdated": "2026-02-25T00:00:00Z"
+}

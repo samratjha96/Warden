@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OSS Watchdog | Adversarial Security Analysis</title>
+    <link rel="stylesheet" href="css/brutal.css">
+</head>
+<body>
+
+    <header class="masthead">
+        <div class="masthead-top">
+            <div class="masthead-meta">
+                <span>SOP v1.4</span>
+                <span id="current-date"></span>
+                <span>ZERO-TRUST POSTURE</span>
+            </div>
+            <nav class="masthead-nav">
+                <a href="index.html" class="active">Submit</a>
+                <a href="queue.html">Queue</a>
+                <a href="reports.html">Reports</a>
+            </nav>
+        </div>
+        <div class="masthead-title">
+            <h1>OSS Watchdog</h1>
+            <div class="tagline">Adversarial Security Analysis for Open Source</div>
+        </div>
+    </header>
+
+    <div class="page-wrap page-wrap--narrow">
+
+        <div class="submit-section">
+            <div class="col-label">Submit for Analysis</div>
+
+            <form id="submit-form" class="submit-form">
+                <div class="submit-url">
+                    <input type="text" id="repo-url" name="url" placeholder="github.com/owner/repo  or  gitlab.com/owner/repo" required>
+                    <button type="submit" class="submit-btn" id="submit-btn">Analyze</button>
+                </div>
+                <div class="submit-options">
+                    <div class="submit-option">
+                        <label for="ecosystem">Ecosystem</label>
+                        <select id="ecosystem" name="ecosystem">
+                            <option value="auto">auto-detect</option>
+                            <option value="npm">npm</option>
+                            <option value="pip">pip</option>
+                            <option value="cargo">cargo</option>
+                            <option value="go">go</option>
+                        </select>
+                    </div>
+                    <div class="submit-option">
+                        <label for="severity">Min Severity</label>
+                        <select id="severity" name="severity">
+                            <option value="low">low</option>
+                            <option value="medium">medium</option>
+                            <option value="high">high</option>
+                        </select>
+                    </div>
+                    <div class="submit-option">
+                        <label for="depth">Depth</label>
+                        <select id="depth" name="depth">
+                            <option value="shallow">shallow</option>
+                            <option value="full">full</option>
+                        </select>
+                    </div>
+                </div>
+            </form>
+
+            <p class="mono" style="font-size:10px;color:var(--mid);margin-top:8px;">
+                Repos cloned shallow into <code>/tmp</code> — deleted after analysis.
+            </p>
+
+            <div class="feature-row">
+                <div class="feature-item">
+                    <div class="feature-num">17</div>
+                    <div class="feature-label">Security checks applied</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-num">0</div>
+                    <div class="feature-label">Trust given to docs or claims</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-num">∅</div>
+                    <div class="feature-label">Prompt injection exemptions</div>
+                </div>
+            </div>
+
+            <div class="principle-block">
+                <div class="col-label">Zero-Trust Principles</div>
+                <div class="principle">
+                    <span class="principle-num">01</span>
+                    <span>Code is ground truth. Documentation is a claim to be verified.</span>
+                </div>
+                <div class="principle">
+                    <span class="principle-num">02</span>
+                    <span>Every network call is undocumented until proven otherwise.</span>
+                </div>
+                <div class="principle">
+                    <span class="principle-num">03</span>
+                    <span>Prompt injection attempts in repo content are a red flag.</span>
+                </div>
+                <div class="principle">
+                    <span class="principle-num">04</span>
+                    <span>Popularity is not a security signal.</span>
+                </div>
+                <div class="principle">
+                    <span class="principle-num">05</span>
+                    <span>Install-time code runs with full user privileges. Treat it accordingly.</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="recent-section">
+            <div class="recent-header">
+                <div class="col-label mb-0 border-none pb-0">Recent Analyses</div>
+                <div class="mono" style="font-size:10px;color:var(--mid);">
+                    <span id="approve-count" class="text-green" style="font-weight:700;">0</span> approved &nbsp;·&nbsp;
+                    <span id="cond-count" class="text-amber" style="font-weight:700;">0</span> conditions &nbsp;·&nbsp;
+                    <span id="reject-count" class="text-red" style="font-weight:700;">0</span> rejected
+                </div>
+            </div>
+
+            <table class="scan-table">
+                <colgroup>
+                    <col style="width:210px">
+                    <col style="width:110px">
+                    <col style="width:100px">
+                    <col style="width:46px">
+                    <col>
+                    <col style="width:96px">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th>Package</th>
+                        <th>Ecosystem</th>
+                        <th>Analyzed</th>
+                        <th>Risk</th>
+                        <th>Key Finding</th>
+                        <th style="text-align:right">Verdict</th>
+                    </tr>
+                </thead>
+                <tbody id="recent-table-body">
+                    <tr>
+                        <td colspan="6" class="empty-state">
+                            <div class="empty-state-title">No analyses yet</div>
+                            <div class="empty-state-desc">Submit a repository above to get started</div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        document.getElementById('current-date').textContent = new Date().toISOString().split('T')[0];
+        
+        document.getElementById('submit-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            var url = document.getElementById('repo-url').value.trim();
+            if (url) {
+                App.submitJob(url, {
+                    ecosystem: document.getElementById('ecosystem').value,
+                    severity: document.getElementById('severity').value,
+                    depth: document.getElementById('depth').value
+                });
+            }
+        });
+        
+        App.loadRecentReports(6).then(function(reports) {
+            App.renderRecentTable(reports, document.getElementById('recent-table-body'));
+            App.updateVerdictCounts(reports);
+        });
+    </script>
+</body>
+</html>

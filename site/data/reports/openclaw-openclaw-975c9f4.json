@@ -1,0 +1,187 @@
+{
+    "id": "openclaw-openclaw-975c9f4",
+    "url": "https://github.com/openclaw/openclaw",
+    "owner": "openclaw",
+    "repo": "openclaw",
+    "commit": "975c9f4",
+    "analyzed": "2026-02-25",
+    "ecosystems": ["Node/pnpm", "Python (config)", "Android/Gradle", "Swift/Apple"],
+    "primaryEcosystem": "Node · pnpm",
+    "verdict": "reject",
+    "risk": "high",
+    "keyFinding": "eval() + curl|bash install path",
+    "sopVersion": "1.4",
+    
+    "summary": [
+        {
+            "category": "Network & Communication",
+            "risk": "medium",
+            "finding": "Broad AI/chat provider endpoints. SSRF protections present in gateway paths."
+        },
+        {
+            "category": "Telemetry & Analytics",
+            "risk": "medium",
+            "finding": "Optional OTel plugin can export traces/metrics externally when enabled."
+        },
+        {
+            "category": "Data Collection & Privacy",
+            "risk": "high",
+            "finding": "Android app — camera, mic, location, SMS, install packages. Chrome extension: debugger + tabs."
+        },
+        {
+            "category": "Code Safety",
+            "risk": "high",
+            "finding": "eval() / new Function() on user-reachable input. Shell execution framework by design."
+        },
+        {
+            "category": "Dependencies",
+            "risk": "medium",
+            "finding": "0 CVEs (pnpm audit). 58/73 deps use floating ranges. Beta/pre-release packages present."
+        },
+        {
+            "category": "Supply Chain",
+            "risk": "high",
+            "finding": "curl | bash pattern in macOS installer and docker smoke tests."
+        },
+        {
+            "category": "Binary Files",
+            "risk": "medium",
+            "finding": "gradle-wrapper.jar committed; no in-repo provenance attestation."
+        },
+        {
+            "category": "Repository Trust",
+            "risk": "medium",
+            "finding": "228k★, SECURITY.md present, but main branch unprotected, mixed signing."
+        }
+    ],
+    
+    "findings": [
+        {
+            "section": "Code Safety",
+            "sectionNumber": "06",
+            "sectionRisk": "high",
+            "items": [
+                {
+                    "severity": "high",
+                    "title": "eval() / new Function() on attacker-reachable input",
+                    "description": "Browser interaction tooling constructs and evaluates function bodies dynamically. The intended use is browser-context automation, but if attacker-controlled input reaches these code paths, arbitrary code execution is the result — with no sandbox.",
+                    "evidence": [
+                        { "file": "pw-tools-core.interactions.ts:287", "note": "new Function(fn_body)" },
+                        { "file": "pw-tools-core.interactions.ts:294", "note": "eval(fn_body)" },
+                        { "file": "pw-tools-core.interactions.ts:328,334", "note": "same pattern, second context" }
+                    ]
+                },
+                {
+                    "severity": "high",
+                    "title": "Shell execution framework — central to node-host",
+                    "description": "Process execution is a core feature. Policy/allowlist machinery exists but is non-trivial; misconfiguration allows arbitrary command execution with the user's full privileges.",
+                    "evidence": [
+                        { "file": "src/node-host/invoke.ts:122", "note": "spawns OS commands" },
+                        { "file": "src/node-host/invoke-system-run.ts:180", "note": "policy/allowlist gate" }
+                    ]
+                }
+            ]
+        },
+        {
+            "section": "Supply Chain",
+            "sectionNumber": "09",
+            "sectionRisk": "high",
+            "items": [
+                {
+                    "severity": "high",
+                    "title": "Remote installer: curl … | bash",
+                    "description": "The macOS app installer builds and executes a remote shell script via curl | bash. This gives the install process full host execution privileges from an unverified remote source — MitM or CDN compromise leads directly to RCE. Same pattern appears in docker smoke/e2e test scripts.",
+                    "evidence": [
+                        { "file": "apps/macos/Sources/OpenClaw/CLIInstaller.swift:73", "note": "macOS installer command construction" },
+                        { "file": "docker e2e scripts", "note": "curl | bash in smoke tests" }
+                    ]
+                }
+            ],
+            "checks": [
+                { "status": "warn", "text": "prepare script in package.json:106 modifies git hooks path at install time." },
+                { "status": "ok", "text": "Lockfile (pnpm-lock.yaml) exists; overrides include security-related package pins." }
+            ]
+        },
+        {
+            "section": "Permissions",
+            "sectionNumber": "10",
+            "sectionRisk": "high",
+            "items": [
+                {
+                    "severity": "high",
+                    "title": "Chrome extension: debugger + tabs — near-total browser control",
+                    "description": "The extension requests debugger, tabs, activeTab, storage, alarms, and webNavigation. Host permissions are loopback-only, but the debugger + tabs combination enables read/write access to all browser tabs, including credential fields and authenticated sessions.",
+                    "evidence": [
+                        { "file": "assets/chrome-extension/manifest.json:12", "note": "permission declarations" }
+                    ]
+                },
+                {
+                    "severity": "high",
+                    "title": "Android: camera, mic, location, SMS, package install",
+                    "description": "Android manifest requests five categories of sensitive permissions. Cleartext traffic is also permitted in defined contexts. The combination makes this app unsuitable for deployment on managed corporate devices.",
+                    "evidence": [
+                        { "file": "apps/android/app/src/main/AndroidManifest.xml:12", "note": "permission declarations" }
+                    ]
+                }
+            ]
+        }
+    ],
+    
+    "redFlags": [
+        { "check": "Obfuscated code without reason", "status": "pass", "notes": "No convincing malicious obfuscation in runtime code" },
+        { "check": "Unexplained network calls to unknown domains", "status": "caution", "notes": "Broad endpoint set; most map to integrations. Some placeholder hosts appear." },
+        { "check": "Committed binaries without source", "status": "caution", "notes": "gradle-wrapper.jar — standard Gradle but unattested" },
+        { "check": "Excessive permissions without justification", "status": "caution", "notes": "Extension + Android permissions are broad and sensitive" },
+        { "check": "Install scripts changing security settings", "status": "caution", "notes": "curl | bash remote installer pattern" },
+        { "check": "Undisclosed telemetry / data collection", "status": "caution", "notes": "OTel plugin can export data when enabled; config-gated" },
+        { "check": "Cryptocurrency mining code", "status": "pass", "notes": "Not found" },
+        { "check": "Known malware signatures / patterns", "status": "pass", "notes": "None found in scanned runtime paths" }
+    ],
+    
+    "remediation": [
+        "Run only in an isolated VM or container with no privileged corp credentials or host mounts.",
+        "Enforce outbound network allowlists — permit only provider domains strictly required for your use case.",
+        "Disable or remove the OTel diagnostics plugin unless explicitly needed.",
+        "Disable remote installer one-liners. Use pinned artifact + checksum/SBOM verification instead of curl | bash.",
+        "Restrict exec tooling by policy — strict allowlists and explicit approvals before any shell execution.",
+        "Verify gradle-wrapper.jar provenance in CI via Gradle wrapper validation and checksum policy.",
+        "Prefer tagged releases and pinned commits. Require branch protection and signed-release verification for internal adoption."
+    ],
+    
+    "sidebar": {
+        "community": {
+            "stars": "228k",
+            "forks": "43k",
+            "contributors": "~900"
+        },
+        "trust": {
+            "securityMd": true,
+            "branchProtection": false,
+            "commitSigning": "mixed",
+            "openIssues": 7648,
+            "created": "2025-11-24"
+        },
+        "dependencies": {
+            "cves": 0,
+            "scanner": "pnpm audit --prod",
+            "prodTransitive": 1177,
+            "directDeps": "73 (54 prod + 19 dev)",
+            "exactPins": "15 / 73",
+            "floatingRanges": "58 / 73"
+        },
+        "checklist": [
+            { "name": "Network & Communication", "status": "warn" },
+            { "name": "Telemetry & Analytics", "status": "warn" },
+            { "name": "Data Collection & Privacy", "status": "fail" },
+            { "name": "Code Safety", "status": "fail" },
+            { "name": "Binary Files", "status": "warn" },
+            { "name": "Dependency Audit", "status": "warn" },
+            { "name": "Supply Chain", "status": "fail" },
+            { "name": "Permissions", "status": "fail" },
+            { "name": "Build & Install", "status": "warn" },
+            { "name": "Repository Trust", "status": "warn" },
+            { "name": "Claim Verification", "status": "pass" },
+            { "name": "Adversarial Deception", "status": "pass" }
+        ]
+    }
+}
