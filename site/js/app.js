@@ -41,8 +41,17 @@ var App = (function() {
     }
     
     // Load a specific report by ID
+    // Sanitize ID to prevent path traversal
     function loadReport(id) {
-        return fetchJSON(REPORTS_PATH + id + '.json');
+        if (!id || typeof id !== 'string') {
+            return Promise.reject(new Error('Invalid report ID'));
+        }
+        // Only allow alphanumeric, hyphens, and underscores
+        var sanitizedId = id.replace(/[^a-zA-Z0-9_-]/g, '');
+        if (sanitizedId !== id || sanitizedId.length === 0) {
+            return Promise.reject(new Error('Invalid report ID'));
+        }
+        return fetchJSON(REPORTS_PATH + sanitizedId + '.json');
     }
     
     // Load recent reports (limited)
