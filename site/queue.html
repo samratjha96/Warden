@@ -38,13 +38,15 @@
             <div class="queue-item" style="border-color: var(--amber);">
                 <div class="queue-item-head">
                     <div class="queue-pkg" id="new-pkg"></div>
-                    <span class="queue-status pending">SUBMITTED</span>
+                    <span class="queue-status processing">PROCESSING</span>
                 </div>
                 <div class="queue-item-body">
                     <div class="queue-meta" id="new-meta"></div>
-                    <p style="margin-top:12px;font-size:13px;color:var(--mid);">
-                        This job has been queued. In a real deployment, an async worker would pick this up and generate a report.
-                        For this static demo, add a JSON file to <code>data/reports/</code> and update <code>data/reports/index.json</code>.
+                    <div class="queue-progress" style="margin-top:12px;">
+                        <div class="queue-progress-bar" style="width:15%; animation: progress-pulse 2s ease-in-out infinite;"></div>
+                    </div>
+                    <p style="margin-top:8px;font-size:12px;color:var(--mid);font-family:'Space Mono',monospace;">
+                        Analysis in progress. You'll be notified when the report is ready.
                     </p>
                 </div>
             </div>
@@ -54,35 +56,14 @@
             <div class="loading-skeleton" style="height:200px;"></div>
         </div>
 
-        <div class="principle-block" style="margin-top:40px;">
-            <div class="col-label">How the Queue Works</div>
-            <div class="principle">
-                <span class="principle-num">01</span>
-                <span>Submit a GitHub/GitLab repository URL on the home page.</span>
-            </div>
-            <div class="principle">
-                <span class="principle-num">02</span>
-                <span>The job is added to <code>data/queue/index.json</code> with status "pending".</span>
-            </div>
-            <div class="principle">
-                <span class="principle-num">03</span>
-                <span>An async worker (outside this static site) picks up pending jobs.</span>
-            </div>
-            <div class="principle">
-                <span class="principle-num">04</span>
-                <span>The LLM-powered analyzer generates a structured JSON report.</span>
-            </div>
-            <div class="principle">
-                <span class="principle-num">05</span>
-                <span>Report is saved to <code>data/reports/{id}.json</code> and index updated.</span>
-            </div>
-            <div class="principle">
-                <span class="principle-num">06</span>
-                <span>This static site renders the report from the JSON file.</span>
-            </div>
-        </div>
-
     </div>
+
+    <style>
+        @keyframes progress-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
 
     <script src="js/app.js"></script>
     <script>
