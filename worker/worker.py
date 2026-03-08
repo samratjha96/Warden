@@ -158,12 +158,12 @@ def run_analysis(job):
     prompt_file.write_text(prompt)
 
     try:
-        # Run Claude CLI in print mode with permissions bypassed
+        # Run Claude CLI in print mode
+        # Using --permission-mode=default to respect normal permission flows
         result = subprocess.run(
             [
                 "claude",
                 "-p",  # print mode
-                "--dangerously-skip-permissions",
                 "--output-format",
                 "text",
                 prompt,
