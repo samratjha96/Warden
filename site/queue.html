@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Analysis Queue | OSS Watchdog</title>
     <link rel="stylesheet" href="css/brutal.css">
+    <style>
+        @keyframes progress-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
 </head>
 <body>
 
@@ -34,63 +40,35 @@
             <div class="page-count" id="queue-count">Loading...</div>
         </div>
 
-        <div id="new-submission" style="display:none; margin-bottom: 24px;">
-            <div class="queue-item" style="border-color: var(--amber);">
-                <div class="queue-item-head">
-                    <div class="queue-pkg" id="new-pkg"></div>
-                    <span class="queue-status processing">PROCESSING</span>
-                </div>
-                <div class="queue-item-body">
-                    <div class="queue-meta" id="new-meta"></div>
-                    <div class="queue-progress" style="margin-top:12px;">
-                        <div class="queue-progress-bar" style="width:15%; animation: progress-pulse 2s ease-in-out infinite;"></div>
-                    </div>
-                    <p style="margin-top:8px;font-size:12px;color:var(--mid);font-family:'Space Mono',monospace;">
-                        Analysis in progress. You'll be notified when the report is ready.
-                    </p>
-                </div>
-            </div>
-        </div>
-
         <div id="queue-container">
             <div class="loading-skeleton" style="height:200px;"></div>
         </div>
 
     </div>
 
-    <style>
-        @keyframes progress-pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-    </style>
-
     <script src="js/app.js"></script>
     <script>
         document.getElementById('current-date').textContent = new Date().toISOString().split('T')[0];
         
-        // Check for new submission from URL params
-        var params = new URLSearchParams(window.location.search);
-        var submittedUrl = params.get('url');
-        
-        if (submittedUrl) {
-            // Parse the URL to extract owner/repo
-            var match = submittedUrl.match(/(?:github|gitlab)\.com\/([^\/]+)\/([^\/\?#]+)/i);
-            var owner = match ? match[1] : 'unknown';
-            var repo = match ? match[2] : submittedUrl;
-            
-            document.getElementById('new-submission').style.display = 'block';
-            document.getElementById('new-pkg').textContent = owner + ' / ' + repo;
-            document.getElementById('new-meta').textContent = 
-                'Submitted: ' + new Date().toISOString().split('T')[0] + ' · URL: ' + submittedUrl;
+        function loadQueue() {
+            fetch('data/queue/jobs.json')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    var jobs = data.jobs || [];
+                    document.getElementById('queue-count').textContent = jobs.length + ' jobs in queue';
+                    App.renderQueue(jobs, document.getElementById('queue-container'));
+                })
+                .catch(function() {
+                    document.getElementById('queue-count').textContent = '0 jobs in queue';
+                    document.getElementById('queue-container').innerHTML = 
+                        '<div class="empty-state"><div class="empty-state-title">Queue Empty</div>' +
+                        '<div class="empty-state-desc">No pending analyses</div></div>';
+                });
         }
         
-        // Load queue
-        App.loadQueueIndex().then(function(data) {
-            var jobs = data.jobs || [];
-            document.getElementById('queue-count').textContent = jobs.length + ' jobs in queue';
-            App.renderQueue(jobs, document.getElementById('queue-container'));
-        });
+        loadQueue();
+        // Refresh every 5 seconds
+        setInterval(loadQueue, 5000);
     </script>
 </body>
 </html>

@@ -67,16 +67,28 @@ var App = (function() {
     }
     
     // Submit a new job to the queue
-    // In a real implementation, this would POST to a backend
-    // For static site, we just redirect to queue page with params
     function submitJob(url, options) {
-        var params = new URLSearchParams({
-            url: url,
-            ecosystem: options.ecosystem || 'auto',
-            severity: options.severity || 'low',
-            depth: options.depth || 'shallow'
+        return fetch('/api/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                url: url,
+                ecosystem: options.ecosystem || 'auto',
+                severity: options.severity || 'low',
+                depth: options.depth || 'shallow'
+            })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.job) {
+                window.location.href = 'queue.html';
+            } else {
+                alert(data.error || 'Submission failed');
+            }
+        })
+        .catch(function(err) {
+            alert('Error: ' + err.message);
         });
-        window.location.href = 'queue.html?' + params.toString();
     }
     
     // Format risk level for display
@@ -405,10 +417,14 @@ var App = (function() {
                         'URL: ' + escapeHtml(job.url) +
                     '</div>';
             
-            if (job.status === 'processing' && job.progress) {
-                html += '<div class="queue-progress">' +
-                    '<div class="queue-progress-bar" style="width:' + job.progress + '%;"></div>' +
-                    '</div>';
+            if (job.status === 'processing' || job.status === 'pending') {
+                var progress = job.progress || (job.status === 'pending' ? 5 : 50);
+                html += '<div class="queue-progress" style="margin-top:12px;">' +
+                    '<div class="queue-progress-bar" style="width:' + progress + '%; animation: progress-pulse 2s ease-in-out infinite;"></div>' +
+                    '</div>' +
+                    '<p style="margin-top:8px;font-size:12px;color:var(--mid);font-family:\'Space Mono\',monospace;">' +
+                    (job.status === 'pending' ? 'Queued for analysis...' : 'Analysis in progress...') +
+                    '</p>';
             }
             
             if (job.status === 'complete' && job.reportId) {
