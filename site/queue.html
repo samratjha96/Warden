@@ -65,6 +65,16 @@
                         '<div class="empty-state-desc">No pending analyses</div></div>';
                 });
         }
+
+        window.removeQueueItem = function(jobId) {
+            App.removeQueueJob(jobId)
+                .then(function() {
+                    loadQueue();
+                })
+                .catch(function(err) {
+                    alert('Remove failed: ' + err.message);
+                });
+        };
         
         loadQueue();
         // Refresh every 5 seconds

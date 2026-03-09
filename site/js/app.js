@@ -82,7 +82,16 @@ var App = (function() {
                 depth: options.depth || 'shallow'
             })
         })
-        .then(function(r) { return r.json(); })
+        .then(function(r) {
+            return r.json().then(function(data) {
+                if (!r.ok) {
+                    var err = new Error(data.error || ('HTTP ' + r.status));
+                    err.code = data.code || '';
+                    throw err;
+                }
+                return data;
+            });
+        })
         .then(function(data) {
             if (data.job) {
                 window.location.href = 'queue.html';
@@ -91,7 +100,31 @@ var App = (function() {
             }
         })
         .catch(function(err) {
+            if (err.code === 'duplicate_queue_entry') {
+                alert(
+                    'MISSION ALREADY ACTIVE\n\n' +
+                    err.message + '\n\n' +
+                    'Open Queue to track or remove the existing entry before re-submitting.'
+                );
+                return;
+            }
             alert('Error: ' + err.message);
+        });
+    }
+
+    // Remove queue job by ID
+    function removeQueueJob(jobId) {
+        if (!jobId) return Promise.reject(new Error('Invalid job ID'));
+        return fetch('/api/queue/' + encodeURIComponent(jobId), {
+            method: 'DELETE'
+        })
+        .then(function(r) {
+            return r.json().then(function(data) {
+                if (!r.ok) {
+                    throw new Error(data.error || ('HTTP ' + r.status));
+                }
+                return data;
+            });
         });
     }
     
@@ -413,7 +446,11 @@ var App = (function() {
             html += '<div class="queue-item">' +
                 '<div class="queue-item-head">' +
                     '<div class="queue-pkg">' + escapeHtml(job.owner + ' / ' + job.repo) + '</div>' +
-                    '<span class="queue-status ' + statusClass + '">' + escapeHtml(job.status) + '</span>' +
+                    '<div style="display:flex;align-items:center;gap:10px;">' +
+                        '<span class="queue-status ' + statusClass + '">' + escapeHtml(job.status) + '</span>' +
+                        '<button type="button" onclick="window.removeQueueItem && window.removeQueueItem(\'' + escapeHtml(job.id) + '\')" ' +
+                        'style="background:transparent;border:1px solid var(--ink);padding:4px 8px;font-family:\'Space Mono\',monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;cursor:pointer;">Remove</button>' +
+                    '</div>' +
                 '</div>' +
                 '<div class="queue-item-body">' +
                     '<div class="queue-meta">' +
@@ -457,6 +494,7 @@ var App = (function() {
         loadReport: loadReport,
         loadRecentReports: loadRecentReports,
         submitJob: submitJob,
+        removeQueueJob: removeQueueJob,
         formatRisk: formatRisk,
         formatVerdict: formatVerdict,
         renderRecentTable: renderRecentTable,

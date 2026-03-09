@@ -12,6 +12,7 @@ Serves static files from ./site and handles POST /api/submit
 import json
 import os
 import hashlib
+import re
 import sys
 import tempfile
 from contextlib import contextmanager
@@ -19,6 +20,7 @@ from datetime import datetime, timezone
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 import fcntl
 
+from queue_ops import enqueue_job, remove_job
 from repo_url import parse_repo_url
 
 PORT = int(os.environ.get("PORT", 8080))
@@ -66,7 +68,7 @@ class Handler(SimpleHTTPRequestHandler):
 
     def end_headers(self):
         self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         super().end_headers()
 
@@ -113,12 +115,47 @@ class Handler(SimpleHTTPRequestHandler):
 
         with queue_lock():
             q = load_queue()
-            q["jobs"].insert(0, job)
+            try:
+                enqueue_job(q, job)
+            except ValueError:
+                return self.respond(
+                    409,
+                    {
+                        "error": (
+                            "Duplicate blocked: this repository is already in the queue. "
+                            "Stand down and monitor the existing mission."
+                        ),
+                        "code": "duplicate_queue_entry",
+                    },
+                )
             q["lastUpdated"] = now()
             save_queue(q)
 
         print(f"[+] Queued: {owner}/{repo} ({job_id})")
         self.respond(201, {"job": job})
+
+    def do_DELETE(self):
+        m = re.fullmatch(r"/api/queue/([a-zA-Z0-9_.-]+)", self.path)
+        if not m:
+            return self.send_error(404)
+
+        job_id = m.group(1)
+        with queue_lock():
+            q = load_queue()
+            removed = remove_job(q, job_id)
+            if not removed:
+                return self.respond(
+                    404,
+                    {
+                        "error": (
+                            "No matching mission in queue. It may have already completed "
+                            "or been removed."
+                        )
+                    },
+                )
+            q["lastUpdated"] = now()
+            save_queue(q)
+        self.respond(200, {"ok": True, "jobId": job_id})
 
     def respond(self, status, data):
         body = json.dumps(data).encode()
