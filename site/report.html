@@ -151,11 +151,15 @@
             var content = report.content.replace(/---\s*\n+##\s*Metadata[\s\S]*$/, '');
             
             var html = '';
+            var repoLabel = App.escapeHtml(report.owner + ' / ' + report.repo);
+            var repoLinkHtml = report.url
+                ? '<a href="' + App.escapeHtml(report.url) + '" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:underline;">' + repoLabel + '</a>'
+                : repoLabel;
             
             // Verdict Banner (same as App.renderReport)
             html += '<div class="verdict-banner">' +
                 '<div>' +
-                    '<div class="verdict-pkg">' + App.escapeHtml(report.owner + ' / ' + report.repo) + '</div>' +
+                    '<div class="verdict-pkg">' + repoLinkHtml + '</div>' +
                     '<div class="verdict-meta">' +
                         '<strong>commit</strong> ' + App.escapeHtml(report.commit || 'unknown') + ' &nbsp;·&nbsp;' +
                         '<strong>analyzed</strong> ' + App.escapeHtml(report.analyzed || 'unknown') + ' &nbsp;·&nbsp;' +

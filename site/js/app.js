@@ -226,9 +226,14 @@ var App = (function() {
         var verdictText = report.verdict === 'reject' ? 'REJECT' :
                          report.verdict === 'approve' ? 'APPROVE' : 'CONDITIONAL';
         
+        var repoLabel = escapeHtml(report.owner + ' / ' + report.repo);
+        var repoLinkHtml = report.url
+            ? '<a href="' + escapeHtml(report.url) + '" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:underline;">' + repoLabel + '</a>'
+            : repoLabel;
+
         html += '<div class="verdict-banner">' +
             '<div>' +
-                '<div class="verdict-pkg">' + escapeHtml(report.owner + ' / ' + report.repo) + '</div>' +
+                '<div class="verdict-pkg">' + repoLinkHtml + '</div>' +
                 '<div class="verdict-meta">' +
                     '<strong>commit</strong> ' + escapeHtml(report.commit) + ' (shallow clone) &nbsp;·&nbsp;' +
                     '<strong>analyzed</strong> ' + escapeHtml(report.analyzed) + ' &nbsp;·&nbsp;' +
