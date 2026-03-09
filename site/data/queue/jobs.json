@@ -1,18 +1,4 @@
 {
-  "jobs": [
-    {
-      "id": "test-myrepo-000f8a43",
-      "url": "https://github.com/test/myrepo",
-      "owner": "test",
-      "repo": "myrepo",
-      "status": "pending",
-      "submitted": "2026-03-08T00:19:33Z",
-      "options": {
-        "ecosystem": "auto",
-        "severity": "low",
-        "depth": "shallow"
-      }
-    }
-  ],
-  "lastUpdated": "2026-03-08T00:19:33Z"
+  "jobs": [],
+  "lastUpdated": "2026-03-08T03:16:27Z"
 }

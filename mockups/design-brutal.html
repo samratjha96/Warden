@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OSS Watchdog | Brutal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --ink:    #0a0a0a;
+            --paper:  #f5f3ef;
+            --rule:   #0a0a0a;
+            --red:    #c41e1e;
+            --amber:  #b85c00;
+            --green:  #1a6b2a;
+            --mid:    #6b6b6b;
+        }
+
+        html { background: var(--paper); color: var(--ink); }
+        body { font-family: 'Space Grotesk', sans-serif; min-height: 100vh; }
+        a { color: inherit; text-decoration: none; }
+        code { font-family: 'Space Mono', monospace; font-size: 0.875em; }
+
+        /* ── Masthead ── */
+        .masthead {
+            border-bottom: 4px solid var(--ink);
+            padding: 0 40px;
+        }
+        .masthead-top {
+            display: flex;
+            align-items: stretch;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--ink);
+            padding: 10px 0;
+        }
+        .masthead-meta {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            color: var(--mid);
+            display: flex;
+            gap: 24px;
+            align-items: center;
+        }
+        .masthead-nav {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            display: flex;
+            gap: 0;
+        }
+        .masthead-nav a {
+            padding: 0 14px;
+            border-left: 1px solid var(--ink);
+            display: flex;
+            align-items: center;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+        .masthead-nav a:first-child { border-left: none; }
+        .masthead-nav a:hover { background: var(--ink); color: var(--paper); }
+
+        .masthead-title {
+            text-align: center;
+            padding: 20px 0 16px;
+        }
+        .masthead-title h1 {
+            font-family: 'Space Mono', monospace;
+            font-size: 48px;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            line-height: 1;
+            text-transform: uppercase;
+        }
+        .masthead-title .tagline {
+            font-size: 11px;
+            font-family: 'Space Mono', monospace;
+            color: var(--mid);
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            margin-top: 6px;
+        }
+
+        /* ── Layout ── */
+        .page-wrap {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 40px 80px;
+        }
+        .submit-section {
+            padding: 32px 0 36px;
+            border-bottom: 3px solid var(--ink);
+        }
+        .recent-section { padding: 32px 0; }
+
+        .col-label {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            border-bottom: 2px solid var(--ink);
+            padding-bottom: 6px;
+            margin-bottom: 18px;
+        }
+
+        .submit-form {
+            border: 2px solid var(--ink);
+        }
+        .submit-url {
+            display: flex;
+            border-bottom: 2px solid var(--ink);
+        }
+        .submit-url input {
+            flex: 1;
+            padding: 12px 14px;
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--ink);
+        }
+        .submit-url input::placeholder { color: #aaa; }
+        .submit-btn {
+            background: var(--ink);
+            color: var(--paper);
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            padding: 0 20px;
+            border: none;
+            cursor: pointer;
+        }
+        .submit-btn:hover { background: var(--red); }
+        .submit-options {
+            display: flex;
+            gap: 0;
+        }
+        .submit-option {
+            flex: 1;
+            padding: 10px 14px;
+            border-right: 1px solid var(--ink);
+        }
+        .submit-option:last-child { border-right: none; }
+        .submit-option label {
+            font-size: 10px;
+            font-family: 'Space Mono', monospace;
+            color: var(--mid);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            display: block;
+            margin-bottom: 4px;
+        }
+        .submit-option select {
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            background: transparent;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .principle-block {
+            margin-top: 28px;
+            padding-top: 18px;
+            border-top: 2px solid var(--ink);
+        }
+        .principle {
+            display: flex;
+            gap: 14px;
+            align-items: baseline;
+            padding: 6px 0;
+            border-bottom: 1px solid #ddd;
+            font-size: 13px;
+        }
+        .principle:last-child { border-bottom: none; }
+        .principle-num {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            color: var(--mid);
+            flex-shrink: 0;
+            width: 18px;
+        }
+
+        /* ── Scan table ── */
+        .scan-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        .scan-table thead tr {
+            border-bottom: 2px solid var(--ink);
+        }
+        .scan-table th {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            padding: 8px 16px 8px 0;
+            text-align: left;
+            color: var(--mid);
+            overflow: hidden;
+        }
+        .scan-table th:last-child { text-align: right; padding-right: 0; }
+        .scan-table td {
+            padding: 15px 16px 15px 0;
+            border-bottom: 1px solid #d4d0c8;
+            vertical-align: top;
+            font-size: 14px;
+            overflow: hidden;
+        }
+        .scan-table tbody tr:last-child td { border-bottom: none; }
+        .scan-table tbody tr { cursor: pointer; }
+        .scan-table tbody tr:hover td { background: rgba(0,0,0,0.02); }
+        .scan-table tbody tr:hover .scan-pkg { text-decoration: underline; }
+
+        .scan-pkg { font-weight: 600; font-size: 14px; }
+        .scan-sub { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--mid); margin-top: 3px; }
+        .scan-eco  { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--mid); white-space: nowrap; }
+        .scan-date { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--mid); white-space: nowrap; }
+        .scan-finding { font-size: 13px; color: var(--mid); line-height: 1.5; }
+
+        .risk-h { color: var(--red);   font-family:'Space Mono',monospace; font-size:11px; font-weight:700; white-space:nowrap; }
+        .risk-m { color: var(--amber); font-family:'Space Mono',monospace; font-size:11px; font-weight:700; white-space:nowrap; }
+        .risk-l { color: var(--green); font-family:'Space Mono',monospace; font-size:11px; font-weight:700; white-space:nowrap; }
+
+        .verdict-cell {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            text-align: right;
+            white-space: nowrap;
+        }
+        .v-reject  { color: var(--red); }
+        .v-approve { color: var(--green); }
+        .v-cond    { color: var(--amber); }
+
+        /* ── Feature row (17 / 0 / ∅) ── */
+        .feature-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            border: 2px solid var(--ink);
+            margin: 20px 0 28px;
+        }
+        .feature-item {
+            padding: 16px 14px;
+            border-right: 2px solid var(--ink);
+        }
+        .feature-item:last-child { border-right: none; }
+        .feature-num {
+            font-family: 'Space Mono', monospace;
+            font-size: 30px;
+            font-weight: 700;
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+        .feature-label { font-size: 11px; color: var(--mid); line-height: 1.4; }
+
+        .stat-block {
+            border: 2px solid var(--ink);
+            margin-bottom: 20px;
+        }
+        .stat-head {
+            background: var(--ink);
+            color: var(--paper);
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            padding: 8px 12px;
+        }
+        .stat-body { padding: 14px 12px; }
+        .stat-num {
+            font-family: 'Space Mono', monospace;
+            font-size: 36px;
+            font-weight: 700;
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+        .stat-desc {
+            font-size: 11px;
+            color: var(--mid);
+            line-height: 1.5;
+        }
+        .stat-trio {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            border-top: 1px solid var(--ink);
+        }
+        .stat-trio-item {
+            padding: 10px 12px;
+            border-right: 1px solid var(--ink);
+        }
+        .stat-trio-item:last-child { border-right: none; }
+        .stat-trio-val {
+            font-family: 'Space Mono', monospace;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--ink);
+        }
+        .stat-trio-label {
+            font-size: 9px;
+            color: var(--mid);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-top: 2px;
+        }
+
+        .sop-block {
+            border: 2px solid var(--ink);
+            padding: 14px 12px;
+            background: var(--ink);
+            color: var(--paper);
+            margin-bottom: 20px;
+        }
+        .sop-label {
+            font-family: 'Space Mono', monospace;
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: #888;
+            margin-bottom: 8px;
+        }
+        .sop-item {
+            display: flex;
+            gap: 8px;
+            font-size: 11px;
+            color: #ccc;
+            padding: 3px 0;
+        }
+        .sop-item-num {
+            font-family: 'Space Mono', monospace;
+            font-size: 9px;
+            color: #555;
+            flex-shrink: 0;
+            width: 14px;
+            padding-top: 1px;
+        }
+
+        .running-scan {
+            border: 2px solid var(--ink);
+            padding: 14px 12px;
+        }
+        .running-pkg {
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .running-bar-wrap {
+            background: #ddd;
+            height: 3px;
+            margin-bottom: 8px;
+        }
+        .running-bar-fill {
+            background: var(--ink);
+            height: 3px;
+            width: 62%;
+        }
+        .running-log {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            color: var(--mid);
+            line-height: 1.8;
+        }
+        .running-log .ok  { color: var(--green); }
+        .running-log .err { color: var(--red); }
+        .running-log .cur { color: var(--ink); font-weight: 700; }
+    </style>
+</head>
+<body>
+
+    <!-- Masthead -->
+    <header class="masthead">
+        <div class="masthead-top">
+            <div class="masthead-meta">
+                <span>SOP v1.4</span>
+                <span>2026-02-25</span>
+                <span>ZERO-TRUST POSTURE</span>
+            </div>
+            <nav class="masthead-nav">
+                <a href="#">Scans</a>
+                <a href="reports-brutal.html">Reports</a>
+                <a href="#">API</a>
+                <a href="#">Docs</a>
+            </nav>
+        </div>
+        <div class="masthead-title">
+            <h1>OSS Watchdog</h1>
+            <div class="tagline">Adversarial Security Analysis for Open Source · 17 Checks · Prompt-Injection Resistant</div>
+        </div>
+    </header>
+
+    <!-- Page body -->
+    <div class="page-wrap">
+
+        <!-- Submit + Principles section -->
+        <div class="submit-section">
+            <div class="col-label">Submit for Analysis</div>
+
+            <div class="submit-form">
+                <div class="submit-url">
+                    <input type="text" placeholder="github.com/owner/repo  or  package@version">
+                    <button class="submit-btn" onclick="window.location.href='analyzing.html'">Analyze →</button>
+                </div>
+                <div class="submit-options">
+                    <div class="submit-option">
+                        <label>Ecosystem</label>
+                        <select>
+                            <option>auto-detect</option>
+                            <option>npm</option>
+                            <option>pip</option>
+                            <option>cargo</option>
+                            <option>go</option>
+                        </select>
+                    </div>
+                    <div class="submit-option">
+                        <label>Min Severity</label>
+                        <select>
+                            <option>low</option>
+                            <option>medium</option>
+                            <option>high</option>
+                        </select>
+                    </div>
+                    <div class="submit-option">
+                        <label>Depth</label>
+                        <select>
+                            <option>shallow</option>
+                            <option>full</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <p style="font-family:'Space Mono',monospace;font-size:10px;color:var(--mid);margin-top:8px;">Repos cloned shallow into <code style="background:#e8e5de;padding:1px 4px;">/tmp</code> — deleted after analysis.</p>
+
+            <div class="feature-row">
+                <div class="feature-item">
+                    <div class="feature-num">17</div>
+                    <div class="feature-label">Security checks applied</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-num">0</div>
+                    <div class="feature-label">Trust given to docs or claims</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-num">∅</div>
+                    <div class="feature-label">Prompt injection exemptions</div>
+                </div>
+            </div>
+
+            <div class="principle-block">
+                <div class="col-label">Zero-Trust Principles</div>
+                <div class="principle">
+                    <span class="principle-num">01</span>
+                    <span>Code is ground truth. Documentation is a claim to be verified.</span>
+                </div>
+                <div class="principle">
+                    <span class="principle-num">02</span>
+                    <span>Every network call is undocumented until proven otherwise.</span>
+                </div>
+                <div class="principle">
+                    <span class="principle-num">03</span>
+                    <span>Prompt injection attempts in repo content are a red flag.</span>
+                </div>
+                <div class="principle">
+                    <span class="principle-num">04</span>
+                    <span>Popularity is not a security signal.</span>
+                </div>
+                <div class="principle">
+                    <span class="principle-num">05</span>
+                    <span>Install-time code runs with full user privileges. Treat it accordingly.</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent analyses section -->
+        <div class="recent-section">
+            <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:18px;">
+                <div class="col-label" style="margin-bottom:0; border-bottom:none; padding-bottom:0;">Recent Analyses</div>
+                <div style="font-family:'Space Mono',monospace; font-size:10px; color:var(--mid);">
+                    <span style="color:var(--green); font-weight:700;">4</span> approved &nbsp;·&nbsp;
+                    <span style="color:var(--amber); font-weight:700;">2</span> conditions &nbsp;·&nbsp;
+                    <span style="color:var(--red); font-weight:700;">2</span> rejected
+                </div>
+            </div>
+
+            <table class="scan-table">
+                <colgroup>
+                    <col style="width:210px">
+                    <col style="width:110px">
+                    <col style="width:100px">
+                    <col style="width:46px">
+                    <col><!-- flexible -->
+                    <col style="width:96px">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th>Package</th>
+                        <th>Ecosystem</th>
+                        <th>Analyzed</th>
+                        <th>Risk</th>
+                        <th>Key Finding</th>
+                        <th style="text-align:right">Verdict</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr onclick="window.location.href='report-brutal.html'">
+                        <td>
+                            <div class="scan-pkg">VectifyAI / PageIndex</div>
+                            <div class="scan-sub">commit a061d53</div>
+                        </td>
+                        <td class="scan-eco">Python · pip</td>
+                        <td class="scan-date">2026-02-25</td>
+                        <td class="risk-m">MED</td>
+                        <td class="scan-finding">No telemetry; install scripts present</td>
+                        <td class="verdict-cell v-cond">Conditions</td>
+                    </tr>
+                    <tr onclick="window.location.href='report-brutal.html'">
+                        <td>
+                            <div class="scan-pkg">openclaw / openclaw</div>
+                            <div class="scan-sub">commit 975c9f4</div>
+                        </td>
+                        <td class="scan-eco">Node · pnpm</td>
+                        <td class="scan-date">2026-02-25</td>
+                        <td class="risk-h">HIGH</td>
+                        <td class="scan-finding">eval() + curl|bash install path</td>
+                        <td class="verdict-cell v-reject">Reject</td>
+                    </tr>
+                    <tr onclick="window.location.href='report-brutal.html'">
+                        <td>
+                            <div class="scan-pkg">facebook / react</div>
+                            <div class="scan-sub">commit 3c9d818</div>
+                        </td>
+                        <td class="scan-eco">JS · npm</td>
+                        <td class="scan-date">2026-02-20</td>
+                        <td class="risk-l">LOW</td>
+                        <td class="scan-finding">No deceptive patterns found</td>
+                        <td class="verdict-cell v-approve">Approve</td>
+                    </tr>
+                    <tr onclick="window.location.href='report-brutal.html'">
+                        <td>
+                            <div class="scan-pkg">axios / axios</div>
+                            <div class="scan-sub">commit 6780b18</div>
+                        </td>
+                        <td class="scan-eco">JS · npm</td>
+                        <td class="scan-date">2026-02-18</td>
+                        <td class="risk-l">LOW</td>
+                        <td class="scan-finding">Expected network patterns only</td>
+                        <td class="verdict-cell v-approve">Approve</td>
+                    </tr>
+                    <tr onclick="window.location.href='report-brutal.html'">
+                        <td>
+                            <div class="scan-pkg">lodash / lodash</div>
+                            <div class="scan-sub">commit af44d97</div>
+                        </td>
+                        <td class="scan-eco">JS · npm</td>
+                        <td class="scan-date">2026-02-15</td>
+                        <td class="risk-m">MED</td>
+                        <td class="scan-finding">2 transitive dep vulnerabilities</td>
+                        <td class="verdict-cell v-cond">Conditions</td>
+                    </tr>
+                    <tr onclick="window.location.href='report-brutal.html'">
+                        <td>
+                            <div class="scan-pkg">example / suspicious-pkg</div>
+                            <div class="scan-sub">commit bb9f001</div>
+                        </td>
+                        <td class="scan-eco">Python · pip</td>
+                        <td class="scan-date">2026-02-14</td>
+                        <td class="risk-h">HIGH</td>
+                        <td class="scan-finding">Prompt injection + binary blobs</td>
+                        <td class="verdict-cell v-reject">Reject</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+</body>
+</html>

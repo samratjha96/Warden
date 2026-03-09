@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Reports | OSS Watchdog</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --ink:   #0a0a0a;
+            --paper: #f5f3ef;
+            --red:   #c41e1e;
+            --amber: #b85c00;
+            --green: #1a6b2a;
+            --mid:   #6b6b6b;
+            --rule:  #d4d0c8;
+        }
+
+        html { background: var(--paper); color: var(--ink); }
+        body { font-family: 'Space Grotesk', sans-serif; min-height: 100vh; }
+        a { color: inherit; text-decoration: none; }
+
+        /* ── Masthead ── */
+        .masthead { border-bottom: 4px solid var(--ink); padding: 0 40px; }
+        .masthead-top { display:flex; align-items:stretch; justify-content:space-between; border-bottom:1px solid var(--ink); padding:10px 0; }
+        .masthead-meta { font-family:'Space Mono',monospace; font-size:10px; color:var(--mid); display:flex; gap:24px; align-items:center; }
+        .masthead-nav { font-family:'Space Mono',monospace; font-size:10px; display:flex; }
+        .masthead-nav a { padding:0 14px; border-left:1px solid var(--ink); display:flex; align-items:center; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; }
+        .masthead-nav a:hover { background:var(--ink); color:var(--paper); }
+        .masthead-nav a.active { background:var(--ink); color:var(--paper); }
+        .masthead-title { text-align:center; padding:20px 0 16px; }
+        .masthead-title h1 { font-family:'Space Mono',monospace; font-size:48px; font-weight:700; letter-spacing:-0.03em; line-height:1; text-transform:uppercase; }
+        .masthead-title .tagline { font-size:11px; font-family:'Space Mono',monospace; color:var(--mid); letter-spacing:0.15em; text-transform:uppercase; margin-top:6px; }
+
+        /* ── Page layout ── */
+        .page-wrap { max-width: 1000px; margin: 0 auto; padding: 0 40px 80px; }
+
+        /* ── Page header ── */
+        .page-header {
+            padding: 28px 0 20px;
+            border-bottom: 3px solid var(--ink);
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 24px;
+        }
+        .page-title {
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+        }
+        .page-count {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            color: var(--mid);
+        }
+
+        /* ── Filters bar ── */
+        .filters {
+            display: flex;
+            align-items: stretch;
+            gap: 0;
+            border: 2px solid var(--ink);
+            margin: 20px 0;
+        }
+        .filter-search {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            border-right: 2px solid var(--ink);
+        }
+        .filter-search input {
+            flex: 1;
+            padding: 9px 14px;
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--ink);
+        }
+        .filter-search input::placeholder { color: #aaa; }
+        .filter-group {
+            display: flex;
+            align-items: stretch;
+            border-right: 2px solid var(--ink);
+        }
+        .filter-group:last-child { border-right: none; }
+        .filter-item {
+            padding: 0 14px;
+            border-right: 1px solid var(--ink);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 2px;
+        }
+        .filter-item:last-child { border-right: none; }
+        .filter-label {
+            font-family: 'Space Mono', monospace;
+            font-size: 9px;
+            color: var(--mid);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        .filter-item select {
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            background: transparent;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            padding: 0;
+            color: var(--ink);
+        }
+
+        /* ── Scan table ── */
+        .scan-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        .scan-table thead tr { border-bottom: 2px solid var(--ink); }
+        .scan-table th {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            padding: 8px 16px 8px 0;
+            text-align: left;
+            color: var(--mid);
+            overflow: hidden;
+            cursor: pointer;
+            user-select: none;
+        }
+        .scan-table th:hover { color: var(--ink); }
+        .scan-table th.sorted { color: var(--ink); }
+        .sort-icon { font-size: 8px; margin-left: 4px; opacity: 0.5; }
+        .scan-table th:last-child { text-align: right; padding-right: 0; }
+        .scan-table td {
+            padding: 14px 16px 14px 0;
+            border-bottom: 1px solid var(--rule);
+            vertical-align: top;
+            font-size: 14px;
+            overflow: hidden;
+        }
+        .scan-table tbody tr:last-child td { border-bottom: none; }
+        .scan-table tbody tr { cursor: pointer; }
+        .scan-table tbody tr:hover td { background: rgba(0,0,0,0.02); }
+        .scan-table tbody tr:hover .scan-pkg { text-decoration: underline; }
+
+        .scan-pkg { font-weight: 600; font-size: 14px; }
+        .scan-sub { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--mid); margin-top: 3px; }
+        .scan-eco  { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--mid); white-space: nowrap; }
+        .scan-date { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--mid); white-space: nowrap; }
+        .scan-finding { font-size: 13px; color: var(--mid); line-height: 1.5; }
+
+        .risk-h { color: var(--red);   font-family:'Space Mono',monospace; font-size:11px; font-weight:700; white-space:nowrap; }
+        .risk-m { color: var(--amber); font-family:'Space Mono',monospace; font-size:11px; font-weight:700; white-space:nowrap; }
+        .risk-l { color: var(--green); font-family:'Space Mono',monospace; font-size:11px; font-weight:700; white-space:nowrap; }
+
+        .verdict-cell {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            text-align: right;
+            white-space: nowrap;
+        }
+        .v-reject  { color: var(--red); }
+        .v-approve { color: var(--green); }
+        .v-cond    { color: var(--amber); }
+
+        /* ── Pagination ── */
+        .pagination {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 0 0;
+            border-top: 2px solid var(--ink);
+            margin-top: 4px;
+        }
+        .pagination-info {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            color: var(--mid);
+        }
+        .pagination-controls { display: flex; gap: 0; }
+        .pg-btn {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 6px 12px;
+            border: 2px solid var(--ink);
+            border-right: none;
+            background: transparent;
+            cursor: pointer;
+            color: var(--ink);
+        }
+        .pg-btn:last-child { border-right: 2px solid var(--ink); }
+        .pg-btn:hover { background: var(--ink); color: var(--paper); }
+        .pg-btn.active { background: var(--ink); color: var(--paper); }
+        .pg-btn:disabled { opacity: 0.3; cursor: default; }
+        .pg-btn:disabled:hover { background: transparent; color: var(--ink); }
+    </style>
+</head>
+<body>
+
+    <!-- Masthead -->
+    <header class="masthead">
+        <div class="masthead-top">
+            <div class="masthead-meta">
+                <span>SOP v1.4</span>
+                <span>2026-02-25</span>
+                <span>ZERO-TRUST POSTURE</span>
+            </div>
+            <nav class="masthead-nav">
+                <a href="design-brutal.html">Scans</a>
+                <a href="reports-brutal.html" class="active">Reports</a>
+                <a href="#">API</a>
+                <a href="#">Docs</a>
+            </nav>
+        </div>
+        <div class="masthead-title">
+            <h1>OSS Watchdog</h1>
+            <div class="tagline">Adversarial Security Analysis for Open Source · 17 Checks · Prompt-Injection Resistant</div>
+        </div>
+    </header>
+
+    <div class="page-wrap">
+
+        <!-- Page header -->
+        <div class="page-header">
+            <div class="page-title">All Analyses</div>
+            <div class="page-count">Showing 1–20 of 147 results</div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filters">
+            <div class="filter-search">
+                <input type="text" placeholder="Filter by package name or owner…">
+            </div>
+            <div class="filter-group">
+                <div class="filter-item">
+                    <div class="filter-label">Verdict</div>
+                    <select>
+                        <option>All</option>
+                        <option>Approve</option>
+                        <option>Conditions</option>
+                        <option>Reject</option>
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <div class="filter-label">Risk</div>
+                    <select>
+                        <option>All</option>
+                        <option>Low</option>
+                        <option>Medium</option>
+                        <option>High</option>
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <div class="filter-label">Ecosystem</div>
+                    <select>
+                        <option>All</option>
+                        <option>npm</option>
+                        <option>pip</option>
+                        <option>cargo</option>
+                        <option>go</option>
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <div class="filter-label">Since</div>
+                    <select>
+                        <option>All time</option>
+                        <option>Last 7 days</option>
+                        <option>Last 30 days</option>
+                        <option>Last 90 days</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table -->
+        <table class="scan-table">
+            <colgroup>
+                <col style="width:210px">
+                <col style="width:110px">
+                <col style="width:100px">
+                <col style="width:46px">
+                <col>
+                <col style="width:96px">
+            </colgroup>
+            <thead>
+                <tr>
+                    <th class="sorted">Package <span class="sort-icon">↓</span></th>
+                    <th>Ecosystem</th>
+                    <th>Analyzed</th>
+                    <th>Risk</th>
+                    <th>Key Finding</th>
+                    <th style="text-align:right">Verdict</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr onclick="window.location.href='report-brutal.html'">
+                    <td><div class="scan-pkg">openclaw / openclaw</div><div class="scan-sub">commit 975c9f4</div></td>
+                    <td class="scan-eco">Node · pnpm</td>
+                    <td class="scan-date">2026-02-25</td>
+                    <td class="risk-h">HIGH</td>
+                    <td class="scan-finding">eval() + curl|bash install path</td>
+                    <td class="verdict-cell v-reject">Reject</td>
+                </tr>
+                <tr onclick="window.location.href='report-brutal.html'">
+                    <td><div class="scan-pkg">VectifyAI / PageIndex</div><div class="scan-sub">commit a061d53</div></td>
+                    <td class="scan-eco">Python · pip</td>
+                    <td class="scan-date">2026-02-25</td>
+                    <td class="risk-m">MED</td>
+                    <td class="scan-finding">No telemetry; install scripts present</td>
+                    <td class="verdict-cell v-cond">Conditions</td>
+                </tr>
+                <tr onclick="window.location.href='report-brutal.html'">
+                    <td><div class="scan-pkg">langchain-ai / langchain</div><div class="scan-sub">commit 4f8c210</div></td>
+                    <td class="scan-eco">Python · pip</td>
+                    <td class="scan-date">2026-02-24</td>
+                    <td class="risk-m">MED</td>
+                    <td class="scan-finding">Network calls to OpenAI, Anthropic; no masking</td>
+                    <td class="verdict-cell v-cond">Conditions</td>
+                </tr>
+                <tr onclick="window.location.href='report-brutal.html'">
+                    <td><div class="scan-pkg">axios / axios</div><div class="scan-sub">commit 6780b18</div></td>
+                    <td class="scan-eco">JS · npm</td>
+                    <td class="scan-date">2026-02-24</td>
+                    <td class="risk-l">LOW</td>
+                    <td class="scan-finding">Expected network patterns only</td>
+                    <td class="verdict-cell v-approve">Approve</td>
+                </tr>
+                <tr onclick="window.location.href='report-brutal.html'">
+                    <td><div class="scan-pkg">psf / requests</div><div class="scan-sub">commit 91d0f09</div></td>
+                    <td class="scan-eco">Python · pip</td>
+                    <td class="scan-date">2026-02-23</td>
+                    <td class="risk-l">LOW</td>
+                    <td class="scan-finding">No deceptive patterns; well-audited</td>
+                    <td class="verdict-cell v-approve">Approve</td>
+                </tr>
+                <tr onclick="window.location.href='report-brutal.html'">
+                    <td><div class="scan-pkg">shadcn-ui / ui</div><div class="scan-sub">commit b3e29cf</div></td>
+                    <td class="scan-eco">JS · npm</td>
+                    <td class="scan-date">2026-02-23</td>
+                    <td class="risk-l">LOW</td>
+                    <td class="scan-finding">UI-only; no network, no install scripts</td>
+                    <td class="verdict-cell v-approve">Approve</td>
+                </tr>
+                <tr onclick="window.location.href='report-brutal.html'">
+                    <td><div class="scan-pkg">example / cryptominer-pkg</div><div class="scan-sub">commit 00f1bad</div></td>
+                    <td class="scan-eco">JS · npm</td>
+                    <td class="scan-date">2026-02-22</td>
+                    <td class="risk-h">HIGH</td>
+                    <td class="scan-finding">Obfuscated postinstall; binary blob detected</td>
+                    <td class="verdict-cell v-reject">Reject</td>
+                </tr>
+                <tr onclick="window.location.href='report-brutal.html'">
+                    <td><div class="scan-pkg">facebook / react</div><div class="scan-sub">commit 3c9d818</div></td>
+                    <td class="scan-eco">JS · npm</td>
+                    <td class="scan-date">2026-02-22</td>
+                    <td class="risk-l">LOW</td>
+                    <td class="scan-finding">No deceptive patterns found</td>
+                    <td class="verdict-cell v-approve">Approve</td>
+                </tr>
+                <tr onclick="window.location.href='report-brutal.html'">
+                    <td><div class="scan-pkg">pydantic / pydantic</div><div class="scan-sub">commit 7a3f021</div></td>
+                    <td class="scan-eco">Python · pip</td>
+                    <td class="scan-date">2026-02-21</td>
+                    <td class="risk-l">LOW</td>
+                    <td class="scan-finding">Rust extension; no network calls</td>
+                    <td class="verdict-cell v-approve">Approve</td>
+                </tr>
+                <tr onclick="window.location.href='report-brutal.html'">
+                    <td><div class="scan-pkg">lodash / lodash</div><div class="scan-sub">commit af44d97</div></td>
+                    <td class="scan-eco">JS · npm</td>
+                    <td class="scan-date">2026-02-21</td>
+                    <td class="risk-m">MED</td>
+                    <td class="scan-finding">2 transitive dep vulnerabilities</td>
+                    <td class="verdict-cell v-cond">Conditions</td>
+                </tr>
+                <tr onclick="window.location.href='report-brutal.html'">
+                    <td><div class="scan-pkg">tokio-rs / tokio</div><div class="scan-sub">commit e91cc40</div></td>
+                    <td class="scan-eco">Rust · cargo</td>
+                    <td class="scan-date">2026-02-20</td>
+                    <td class="risk-l">LOW</td>
+                    <td class="scan-finding">Async runtime; no unexpected I/O</td>
+                    <td class="verdict-cell v-approve">Approve</td>
+                </tr>
+                <tr onclick="window.location.href='report-brutal.html'">
+                    <td><div class="scan-pkg">huggingface / transformers</div><div class="scan-sub">commit 52ad0c8</div></td>
+                    <td class="scan-eco">Python · pip</td>
+                    <td class="scan-date">2026-02-20</td>
+                    <td class="risk-m">MED</td>
+                    <td class="scan-finding">Model downloads from hub.hf.co at runtime</td>
+                    <td class="verdict-cell v-cond">Conditions</td>
+                </tr>
+                <tr onclick="window.location.href='report-brutal.html'">
+                    <td><div class="scan-pkg">example / data-exfil</div><div class="scan-sub">commit deadc0d</div></td>
+                    <td class="scan-eco">Python · pip</td>
+                    <td class="scan-date">2026-02-19</td>
+                    <td class="risk-h">HIGH</td>
+                    <td class="scan-finding">env vars + ~/.ssh shipped to remote endpoint</td>
+                    <td class="verdict-cell v-reject">Reject</td>
+                </tr>
+                <tr onclick="window.location.href='report-brutal.html'">
+                    <td><div class="scan-pkg">vercel / ai</div><div class="scan-sub">commit 1d8b903</div></td>
+                    <td class="scan-eco">JS · npm</td>
+                    <td class="scan-date">2026-02-19</td>
+                    <td class="risk-m">MED</td>
+                    <td class="scan-finding">Streams to AI providers; key handling acceptable</td>
+                    <td class="verdict-cell v-cond">Conditions</td>
+                </tr>
+                <tr onclick="window.location.href='report-brutal.html'">
+                    <td><div class="scan-pkg">golang / net</div><div class="scan-sub">commit c3110f5</div></td>
+                    <td class="scan-eco">Go · mod</td>
+                    <td class="scan-date">2026-02-18</td>
+                    <td class="risk-l">LOW</td>
+                    <td class="scan-finding">Stdlib extension; audited supply chain</td>
+                    <td class="verdict-cell v-approve">Approve</td>
+                </tr>
+                <tr onclick="window.location.href='report-brutal.html'">
+                    <td><div class="scan-pkg">openai / openai-python</div><div class="scan-sub">commit 83c7a11</div></td>
+                    <td class="scan-eco">Python · pip</td>
+                    <td class="scan-date">2026-02-18</td>
+                    <td class="risk-m">MED</td>
+                    <td class="scan-finding">All traffic to api.openai.com; expected by design</td>
+                    <td class="verdict-cell v-cond">Conditions</td>
+                </tr>
+                <tr onclick="window.location.href='report-brutal.html'">
+                    <td><div class="scan-pkg">astral-sh / uv</div><div class="scan-sub">commit f94d2b1</div></td>
+                    <td class="scan-eco">Rust · cargo</td>
+                    <td class="scan-date">2026-02-17</td>
+                    <td class="risk-l">LOW</td>
+                    <td class="scan-finding">Package manager; PyPI traffic only</td>
+                    <td class="verdict-cell v-approve">Approve</td>
+                </tr>
+                <tr onclick="window.location.href='report-brutal.html'">
+                    <td><div class="scan-pkg">example / suspicious-pkg</div><div class="scan-sub">commit bb9f001</div></td>
+                    <td class="scan-eco">Python · pip</td>
+                    <td class="scan-date">2026-02-14</td>
+                    <td class="risk-h">HIGH</td>
+                    <td class="scan-finding">Prompt injection + binary blobs</td>
+                    <td class="verdict-cell v-reject">Reject</td>
+                </tr>
+                <tr onclick="window.location.href='report-brutal.html'">
+                    <td><div class="scan-pkg">stripe / stripe-node</div><div class="scan-sub">commit d2091fe</div></td>
+                    <td class="scan-eco">JS · npm</td>
+                    <td class="scan-date">2026-02-13</td>
+                    <td class="risk-l">LOW</td>
+                    <td class="scan-finding">API client; all traffic to stripe.com</td>
+                    <td class="verdict-cell v-approve">Approve</td>
+                </tr>
+                <tr onclick="window.location.href='report-brutal.html'">
+                    <td><div class="scan-pkg">microsoft / playwright</div><div class="scan-sub">commit 0c48f7e</div></td>
+                    <td class="scan-eco">JS · npm</td>
+                    <td class="scan-date">2026-02-12</td>
+                    <td class="risk-m">MED</td>
+                    <td class="scan-finding">Downloads browser binaries at install time</td>
+                    <td class="verdict-cell v-cond">Conditions</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Pagination -->
+        <div class="pagination">
+            <div class="pagination-info">Page 1 of 8 &nbsp;·&nbsp; 147 total analyses</div>
+            <div class="pagination-controls">
+                <button class="pg-btn" disabled>← Prev</button>
+                <button class="pg-btn active">1</button>
+                <button class="pg-btn">2</button>
+                <button class="pg-btn">3</button>
+                <button class="pg-btn">4</button>
+                <button class="pg-btn">5</button>
+                <button class="pg-btn">…</button>
+                <button class="pg-btn">8</button>
+                <button class="pg-btn">Next →</button>
+            </div>
+        </div>
+
+    </div>
+
+</body>
+</html>

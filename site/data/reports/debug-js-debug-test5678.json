@@ -1,0 +1,287 @@
+{
+  "id": "debug-js-debug-test5678",
+  "url": "https://github.com/debug-js/debug",
+  "owner": "debug-js",
+  "repo": "debug",
+  "analyzed": "2026-03-08",
+  "sopVersion": "1.4",
+  "commit": "6704cea64eb6943f74fc82159401731acb170b3c",
+  "ecosystems": [
+    "JS/npm"
+  ],
+  "primaryEcosystem": "JS/npm",
+  "verdict": "approve",
+  "risk": "low",
+  "keyFinding": "Clean debugging utility with no security risks, only minor documentation gaps",
+  "summary": [
+    {
+      "category": "Network & Communication",
+      "risk": "low",
+      "finding": "No network calls or external communications found"
+    },
+    {
+      "category": "Telemetry & Analytics",
+      "risk": "low",
+      "finding": "No analytics or tracking functionality detected"
+    },
+    {
+      "category": "Data Collection & Privacy",
+      "risk": "low",
+      "finding": "Only reads DEBUG environment variable for configuration"
+    },
+    {
+      "category": "Code Safety",
+      "risk": "low",
+      "finding": "Clean code with no dynamic execution or obfuscation"
+    },
+    {
+      "category": "Binary Files",
+      "risk": "low",
+      "finding": "No binary files found, all source is readable JavaScript"
+    },
+    {
+      "category": "Dependencies",
+      "risk": "low",
+      "finding": "Single production dependency 'ms' with floating version"
+    },
+    {
+      "category": "Supply Chain",
+      "risk": "low",
+      "finding": "No lifecycle scripts or install-time behavior"
+    },
+    {
+      "category": "Repository Trust",
+      "risk": "medium",
+      "finding": "Well-established project but lacks formal security documentation"
+    }
+  ],
+  "findings": [
+    {
+      "section": "Network & Communication",
+      "sectionNumber": "01",
+      "sectionRisk": "low",
+      "items": [],
+      "checks": [
+        {
+          "status": "ok",
+          "text": "No HTTP/HTTPS network calls found"
+        },
+        {
+          "status": "ok",
+          "text": "No external URL endpoints detected"
+        },
+        {
+          "status": "ok",
+          "text": "No fetch, XMLHttpRequest, or request usage"
+        }
+      ]
+    },
+    {
+      "section": "Code Safety",
+      "sectionNumber": "02",
+      "sectionRisk": "low",
+      "items": [],
+      "checks": [
+        {
+          "status": "ok",
+          "text": "No eval() or Function() constructor usage"
+        },
+        {
+          "status": "ok",
+          "text": "No code obfuscation detected"
+        },
+        {
+          "status": "ok",
+          "text": "Simple hash function for color selection only"
+        }
+      ]
+    },
+    {
+      "section": "Dependencies",
+      "sectionNumber": "03",
+      "sectionRisk": "low",
+      "items": [
+        {
+          "severity": "low",
+          "title": "Floating version range for production dependency",
+          "description": "The 'ms' dependency uses ^2.1.3 which allows minor version updates",
+          "evidence": [
+            {
+              "file": "package.json:32",
+              "note": "\"ms\": \"^2.1.3\""
+            }
+          ]
+        }
+      ],
+      "checks": [
+        {
+          "status": "ok",
+          "text": "Only one production dependency"
+        },
+        {
+          "status": "warn",
+          "text": "Uses floating version ranges"
+        },
+        {
+          "status": "ok",
+          "text": "No lifecycle scripts present"
+        }
+      ]
+    },
+    {
+      "section": "Repository Trust",
+      "sectionNumber": "04",
+      "sectionRisk": "medium",
+      "items": [
+        {
+          "severity": "low",
+          "title": "Missing security documentation",
+          "description": "No SECURITY.md file or .github security configuration found",
+          "evidence": [
+            {
+              "file": ".",
+              "note": "No SECURITY.md file found"
+            },
+            {
+              "file": ".",
+              "note": "No .github directory found"
+            }
+          ]
+        }
+      ],
+      "checks": [
+        {
+          "status": "ok",
+          "text": "Well-established project with community funding"
+        },
+        {
+          "status": "warn",
+          "text": "No formal security policy"
+        },
+        {
+          "status": "ok",
+          "text": "MIT license"
+        }
+      ]
+    }
+  ],
+  "redFlags": [
+    {
+      "check": "Obfuscated code without reason",
+      "status": "pass",
+      "notes": "All code is clean and readable"
+    },
+    {
+      "check": "Unexplained network calls to unknown domains",
+      "status": "pass",
+      "notes": "No network calls found"
+    },
+    {
+      "check": "Committed binaries without source",
+      "status": "pass",
+      "notes": "No binary files detected"
+    },
+    {
+      "check": "Excessive permissions without justification",
+      "status": "pass",
+      "notes": "Only accesses standard Node.js APIs"
+    },
+    {
+      "check": "Install scripts changing security settings",
+      "status": "pass",
+      "notes": "No install scripts present"
+    },
+    {
+      "check": "Undisclosed telemetry / data collection",
+      "status": "pass",
+      "notes": "No telemetry or data collection found"
+    },
+    {
+      "check": "Cryptocurrency mining code",
+      "status": "pass",
+      "notes": "No mining code detected"
+    },
+    {
+      "check": "Known malware signatures / patterns",
+      "status": "pass",
+      "notes": "No malware patterns found"
+    }
+  ],
+  "remediation": [
+    "Add SECURITY.md file with vulnerability reporting process",
+    "Consider pinning the 'ms' dependency to exact version for better supply chain security",
+    "Add GitHub security policy and branch protection if not already configured"
+  ],
+  "sidebar": {
+    "community": {
+      "stars": "Unknown",
+      "forks": "Unknown",
+      "contributors": "4+"
+    },
+    "trust": {
+      "securityMd": false,
+      "branchProtection": false,
+      "commitSigning": "none",
+      "openIssues": 0,
+      "created": "Unknown"
+    },
+    "dependencies": {
+      "cves": 0,
+      "scanner": "npm audit",
+      "prodTransitive": 1,
+      "directDeps": "1 production, 11 dev",
+      "exactPins": "0 / 1",
+      "floatingRanges": "1 / 1"
+    },
+    "checklist": [
+      {
+        "name": "Network & Communication",
+        "status": "pass"
+      },
+      {
+        "name": "Telemetry & Analytics",
+        "status": "pass"
+      },
+      {
+        "name": "Data Collection & Privacy",
+        "status": "pass"
+      },
+      {
+        "name": "Code Safety",
+        "status": "pass"
+      },
+      {
+        "name": "Binary Files",
+        "status": "pass"
+      },
+      {
+        "name": "Dependency Audit",
+        "status": "pass"
+      },
+      {
+        "name": "Supply Chain",
+        "status": "pass"
+      },
+      {
+        "name": "Permissions",
+        "status": "pass"
+      },
+      {
+        "name": "Build & Install",
+        "status": "pass"
+      },
+      {
+        "name": "Repository Trust",
+        "status": "warn"
+      },
+      {
+        "name": "Claim Verification",
+        "status": "pass"
+      },
+      {
+        "name": "Adversarial Deception",
+        "status": "pass"
+      }
+    ]
+  }
+}

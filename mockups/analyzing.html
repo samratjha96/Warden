@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analyzing Package... | OSS Watchdog</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { 
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    },
+                    colors: {
+                        zinc: { 950: '#09090b', 900: '#18181b', 800: '#27272a', 700: '#3f3f46', 400: '#a1a1aa', 100: '#f4f4f5' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #09090b; color: #f4f4f5; }
+        .glass-nav { background: rgba(9, 9, 11, 0.7); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+        .glass-card { background: rgba(24, 24, 27, 0.4); backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.2); }
+        .scan-line {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(to right, transparent, rgba(59, 130, 246, 0.8), transparent);
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+            animation: scan 2.5s infinite linear;
+        }
+        @keyframes scan {
+            0% { transform: translateY(0); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(300px); opacity: 0; }
+        }
+        .blinking-cursor { animation: blink 1s step-end infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans antialiased">
+
+    <!-- Navigation -->
+    <nav class="glass-nav sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-500"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"></path><path d="m9 12 2 2 4-4"></path></svg>
+                <span class="font-semibold tracking-tight text-zinc-100">OSS Watchdog</span>
+            </div>
+            <a href="index.html" class="text-sm text-zinc-400 hover:text-zinc-100 flex items-center gap-1 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                Cancel Analysis
+            </a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col items-center pt-24 pb-16 px-6">
+        
+        <div class="max-w-3xl w-full text-center mb-10">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-zinc-900 border border-zinc-800 mb-6 relative">
+                <div class="absolute inset-0 bg-blue-500/20 blur-xl rounded-full animate-pulse"></div>
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-blue-400 relative z-10"><path d="M2 12h3l3-9 5 18 3-9h5"/></svg>
+            </div>
+            <h1 class="text-3xl font-semibold tracking-tight text-zinc-100 mb-2">Analyzing example/suspicious-package</h1>
+            <p class="text-zinc-400">Applying Adversarial Security Analysis Posture...</p>
+        </div>
+
+        <!-- Terminal Window -->
+        <div class="w-full max-w-3xl glass-card rounded-xl overflow-hidden shadow-2xl relative">
+            
+            <!-- Window Header -->
+            <div class="h-10 bg-zinc-900/80 border-b border-white/5 flex items-center px-4 justify-between">
+                <div class="flex gap-2">
+                    <div class="w-3 h-3 rounded-full bg-rose-500/80"></div>
+                    <div class="w-3 h-3 rounded-full bg-amber-500/80"></div>
+                    <div class="w-3 h-3 rounded-full bg-emerald-500/80"></div>
+                </div>
+                <div class="text-xs text-zinc-500 font-mono">Agent: oss-security-analyzer.sop.md</div>
+                <div class="w-16"></div>
+            </div>
+
+            <!-- Terminal Body -->
+            <div class="p-6 bg-zinc-950/80 font-mono text-sm leading-relaxed h-[350px] relative overflow-hidden">
+                <div class="scan-line"></div>
+                
+                <div class="space-y-2 text-zinc-400">
+                    <div><span class="text-blue-400">[INFO]</span> Initializing zero-trust environment...</div>
+                    <div><span class="text-blue-400">[INFO]</span> Cloning repository https://github.com/example/suspicious-package...</div>
+                    <div><span class="text-emerald-400">[SUCCESS]</span> Clone completed. (Size: 1.2MB, Files: 42)</div>
+                    <div><span class="text-blue-400">[INFO]</span> Detected package ecosystem: <span class="text-zinc-200 font-medium">npm (Node.js)</span></div>
+                    <div><span class="text-blue-400">[INFO]</span> Step 4: Analyzing network and communication patterns...</div>
+                    <div class="pl-6 text-amber-400 flex items-start gap-2">
+                        <span>⚠️</span>
+                        <span>Found 3 undocumented external HTTP/WebSocket endpoints in src/api.js.</span>
+                    </div>
+                    <div><span class="text-blue-400">[INFO]</span> Step 5: Scanning for telemetry and analytics SDKs...</div>
+                    <div><span class="text-blue-400">[INFO]</span> Step 7: Scanning for dynamic code execution (eval, Function, setTimeout)...</div>
+                    <div class="pl-6 text-rose-400 flex items-start gap-2">
+                        <span>❌</span>
+                        <span>CRITICAL: Found obfuscated string decoded via eval() in lib/parser.js.</span>
+                    </div>
+                    <div><span class="text-blue-400">[INFO]</span> Step 8: Searching for committed binary files...</div>
+                    <div><span class="text-emerald-400">[SUCCESS]</span> No unexpected binaries found.</div>
+                    <div><span class="text-blue-400">[INFO]</span> Step 9: Running dependency audit (npx npm audit)...</div>
+                    <div class="pl-6 text-amber-400 flex items-start gap-2">
+                        <span>⚠️</span>
+                        <span>Found 2 high-severity vulnerabilities in transitive dependencies.</span>
+                    </div>
+                    <div><span class="text-blue-400">[INFO]</span> Step 14: Verifying documentation claims against code reality...</div>
+                    <div class="pl-6 text-rose-400 flex items-start gap-2">
+                        <span>❌</span>
+                        <span>CONTRADICTED: README claims "Fully offline" but code initiates 3 network connections.</span>
+                    </div>
+                    <div><span class="text-blue-400">[INFO]</span> Synthesizing final security review report<span class="blinking-cursor bg-zinc-400 inline-block w-2 h-4 align-middle ml-1"></span></div>
+                </div>
+            </div>
+
+            <!-- Progress Footer -->
+            <div class="h-14 bg-zinc-900/50 border-t border-white/5 px-6 flex items-center justify-between">
+                <div class="flex items-center gap-3 w-full max-w-sm">
+                    <div class="w-full bg-zinc-800 rounded-full h-1.5 overflow-hidden">
+                        <div class="bg-blue-500 h-1.5 rounded-full" style="width: 85%"></div>
+                    </div>
+                    <span class="text-xs font-mono text-zinc-500">85%</span>
+                </div>
+                <button type="button" onclick="window.location.href='report.html'" class="text-xs text-blue-400 hover:text-blue-300 transition-colors font-medium cursor-pointer">
+                    Skip to Report &rarr;
+                </button>
+            </div>
+        </div>
+
+    </main>
+</body>
+</html>

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OSS Watchdog | Light</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Libre+Baskerville:ital,wght@0,700;1,400&display=swap" rel="stylesheet">
+    <style>
+        body { background: #fafaf9; color: #1c1c1e; font-family: 'Inter', sans-serif; }
+        .serif { font-family: 'Libre Baskerville', serif; }
+        .risk-high { color: #b91c1c; }
+        .risk-medium { color: #b45309; }
+        .risk-low { color: #15803d; }
+        .verdict-reject { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+        .verdict-approve { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+        .verdict-conditions { background: #fef9c3; color: #854d0e; border: 1px solid #fde047; }
+        input:focus { outline: none; }
+    </style>
+</head>
+<body class="min-h-screen selection:bg-black selection:text-white">
+
+    <!-- Navigation -->
+    <header class="border-b border-zinc-200 sticky top-0 z-50 bg-white/90 backdrop-blur-sm">
+        <div class="max-w-5xl mx-auto px-8 h-14 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"></path><path d="m9 12 2 2 4-4"></path></svg>
+                <span class="font-semibold text-sm">OSS Watchdog</span>
+                <span class="text-zinc-300 mx-2">|</span>
+                <span class="text-xs text-zinc-400 font-mono">v1.4</span>
+            </div>
+            <nav class="flex items-center gap-6 text-sm text-zinc-500">
+                <a href="#" class="hover:text-zinc-900 transition-colors border-b border-transparent hover:border-zinc-300">Scans</a>
+                <a href="#" class="hover:text-zinc-900 transition-colors border-b border-transparent hover:border-zinc-300">API</a>
+                <a href="#" class="hover:text-zinc-900 transition-colors border-b border-transparent hover:border-zinc-300">Docs</a>
+                <a href="#" class="bg-zinc-900 text-white text-xs px-4 py-1.5 rounded hover:bg-zinc-700 transition-colors">Sign in</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero -->
+    <main class="max-w-5xl mx-auto px-8 pt-16 pb-24">
+        
+        <div class="mb-16">
+            <p class="text-xs font-mono uppercase tracking-widest text-zinc-400 mb-6">Zero-Trust Adversarial Analysis</p>
+            <h1 class="serif text-5xl md:text-6xl font-bold text-zinc-900 mb-4 leading-tight max-w-3xl">
+                Code is ground truth.<br>
+                <em class="font-normal text-zinc-400">Documentation is a claim.</em>
+            </h1>
+            <p class="text-zinc-500 text-lg max-w-xl leading-relaxed mt-6">
+                Submit any GitHub repository or package. Seventeen security checks applied under zero-trust posture. Prompt injection resistant.
+            </p>
+        </div>
+
+        <!-- Submission Form -->
+        <div class="border border-zinc-200 rounded-lg overflow-hidden shadow-sm mb-4 max-w-2xl">
+            <div class="bg-white px-5 py-4 border-b border-zinc-100">
+                <div class="text-xs font-mono uppercase tracking-widest text-zinc-400 mb-3">Analysis Target</div>
+                <input type="text" placeholder="https://github.com/owner/repo  or  package-name"
+                    class="w-full text-sm text-zinc-800 placeholder-zinc-300 bg-transparent border-none py-1">
+            </div>
+            <div class="bg-zinc-50 px-5 py-3 flex items-center justify-between">
+                <div class="flex items-center gap-5 text-sm text-zinc-500">
+                    <label class="flex items-center gap-2">
+                        <span class="text-xs text-zinc-400">Ecosystem</span>
+                        <select class="bg-transparent text-xs border border-zinc-200 rounded px-2 py-1 focus:outline-none">
+                            <option>auto-detect</option>
+                            <option>npm</option>
+                            <option>pip</option>
+                            <option>cargo</option>
+                            <option>go</option>
+                        </select>
+                    </label>
+                    <label class="flex items-center gap-2">
+                        <span class="text-xs text-zinc-400">Min Severity</span>
+                        <select class="bg-transparent text-xs border border-zinc-200 rounded px-2 py-1 focus:outline-none">
+                            <option>low</option>
+                            <option>medium</option>
+                            <option>high</option>
+                            <option>critical</option>
+                        </select>
+                    </label>
+                </div>
+                <button onclick="window.location.href='analyzing.html'" class="bg-zinc-900 text-white text-xs px-5 py-2 rounded hover:bg-zinc-700 transition-colors font-medium">
+                    Run Analysis
+                </button>
+            </div>
+        </div>
+        <p class="text-xs text-zinc-400 max-w-2xl">Repositories cloned into <code class="font-mono bg-zinc-100 px-1">/tmp</code> and removed after analysis. Only shallow clone performed.</p>
+
+        <!-- Feature row -->
+        <div class="grid grid-cols-3 gap-10 my-16 max-w-2xl border-t border-zinc-200 pt-10">
+            <div>
+                <div class="text-2xl font-bold text-zinc-900 mb-1">17</div>
+                <div class="text-xs text-zinc-400">Security Checks Applied</div>
+            </div>
+            <div>
+                <div class="text-2xl font-bold text-zinc-900 mb-1">0</div>
+                <div class="text-xs text-zinc-400">Trust Given to Docs or Claims</div>
+            </div>
+            <div>
+                <div class="text-2xl font-bold text-zinc-900 mb-1">∅</div>
+                <div class="text-xs text-zinc-400">Prompt Injection Exemptions</div>
+            </div>
+        </div>
+
+        <!-- Recent Analyses Table -->
+        <div class="border-t border-zinc-200 pt-8">
+            <div class="flex items-center justify-between mb-5">
+                <h3 class="text-xs font-mono uppercase tracking-widest text-zinc-400">Recent Analyses</h3>
+                <a href="#" class="text-xs text-zinc-400 hover:text-zinc-700 transition-colors">View all &rarr;</a>
+            </div>
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-xs text-zinc-400 border-b border-zinc-100">
+                        <th class="text-left py-2.5 pr-8 font-medium">Package</th>
+                        <th class="text-left py-2.5 pr-8 font-medium">Ecosystem</th>
+                        <th class="text-left py-2.5 pr-8 font-medium">Risk</th>
+                        <th class="text-left py-2.5 pr-8 font-medium">Finding</th>
+                        <th class="text-left py-2.5 font-medium">Verdict</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="border-b border-zinc-50 hover:bg-zinc-50 transition-colors cursor-pointer" onclick="window.location.href='report-light.html'">
+                        <td class="py-3.5 pr-8">
+                            <div class="font-medium text-zinc-800">facebook/react</div>
+                            <div class="text-xs text-zinc-400 font-mono">github.com</div>
+                        </td>
+                        <td class="py-3.5 pr-8 text-xs text-zinc-500">npm</td>
+                        <td class="py-3.5 pr-8 text-xs risk-low font-semibold">LOW</td>
+                        <td class="py-3.5 pr-8 text-xs text-zinc-500">No deceptive patterns</td>
+                        <td class="py-3.5">
+                            <span class="verdict-approve text-xs font-medium px-2 py-0.5 rounded">APPROVE</span>
+                        </td>
+                    </tr>
+                    <tr class="border-b border-zinc-50 hover:bg-zinc-50 transition-colors cursor-pointer" onclick="window.location.href='report-light.html'">
+                        <td class="py-3.5 pr-8">
+                            <div class="font-medium text-zinc-800">lodash/lodash</div>
+                            <div class="text-xs text-zinc-400 font-mono">github.com</div>
+                        </td>
+                        <td class="py-3.5 pr-8 text-xs text-zinc-500">npm</td>
+                        <td class="py-3.5 pr-8 text-xs risk-medium font-semibold">MEDIUM</td>
+                        <td class="py-3.5 pr-8 text-xs text-zinc-500">2 dep vulnerabilities</td>
+                        <td class="py-3.5">
+                            <span class="verdict-conditions text-xs font-medium px-2 py-0.5 rounded">CONDITIONS</span>
+                        </td>
+                    </tr>
+                    <tr class="border-b border-zinc-50 hover:bg-zinc-50 transition-colors cursor-pointer" onclick="window.location.href='report-light.html'">
+                        <td class="py-3.5 pr-8">
+                            <div class="font-medium text-zinc-800">example/suspicious-package</div>
+                            <div class="text-xs text-zinc-400 font-mono">github.com</div>
+                        </td>
+                        <td class="py-3.5 pr-8 text-xs text-zinc-500">python</td>
+                        <td class="py-3.5 pr-8 text-xs risk-high font-semibold">HIGH</td>
+                        <td class="py-3.5 pr-8 text-xs text-zinc-500">eval() + prompt injection</td>
+                        <td class="py-3.5">
+                            <span class="verdict-reject text-xs font-medium px-2 py-0.5 rounded">REJECT</span>
+                        </td>
+                    </tr>
+                    <tr class="hover:bg-zinc-50 transition-colors cursor-pointer" onclick="window.location.href='report-light.html'">
+                        <td class="py-3.5 pr-8">
+                            <div class="font-medium text-zinc-800">axios/axios</div>
+                            <div class="text-xs text-zinc-400 font-mono">github.com</div>
+                        </td>
+                        <td class="py-3.5 pr-8 text-xs text-zinc-500">npm</td>
+                        <td class="py-3.5 pr-8 text-xs risk-low font-semibold">LOW</td>
+                        <td class="py-3.5 pr-8 text-xs text-zinc-500">Expected network patterns</td>
+                        <td class="py-3.5">
+                            <span class="verdict-approve text-xs font-medium px-2 py-0.5 rounded">APPROVE</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+</body>
+</html>

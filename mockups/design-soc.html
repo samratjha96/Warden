@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OSS Watchdog | SOC</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg:       #080c14;
+            --panel:    #0d1321;
+            --panel2:   #111827;
+            --border:   rgba(255,255,255,0.06);
+            --border2:  rgba(255,255,255,0.03);
+            --accent:   #3b82f6;
+            --accent2:  #1d4ed8;
+            --text:     #e2e8f0;
+            --text-2:   #94a3b8;
+            --text-3:   #475569;
+            --crit:     #f87171;
+            --high:     #fb923c;
+            --med:      #fbbf24;
+            --low:      #34d399;
+            --pass:     #34d399;
+        }
+
+        html { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 13px; }
+        body { min-height: 100vh; display: flex; flex-direction: column; }
+        code { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #93c5fd; background: rgba(147,197,253,0.08); padding: 1px 5px; border-radius: 3px; }
+
+        /* ── Top bar ── */
+        .topbar {
+            height: 48px;
+            background: var(--panel);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            gap: 24px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .logo-icon {
+            width: 26px;
+            height: 26px;
+            background: var(--accent);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .topbar-nav {
+            display: flex;
+            gap: 2px;
+            margin-left: 8px;
+        }
+        .topbar-nav a {
+            padding: 6px 12px;
+            font-size: 12px;
+            color: var(--text-3);
+            border-radius: 6px;
+            text-decoration: none;
+            transition: background 0.1s, color 0.1s;
+        }
+        .topbar-nav a:hover { background: var(--panel2); color: var(--text-2); }
+        .topbar-nav a.active { background: rgba(59,130,246,0.12); color: var(--accent); }
+        .topbar-right {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .scan-btn {
+            background: var(--accent);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 500;
+            padding: 7px 16px;
+            border-radius: 7px;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .scan-btn:hover { background: var(--accent2); }
+        .status-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--low);
+            box-shadow: 0 0 6px var(--low);
+        }
+        .topbar-meta {
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-3);
+        }
+
+        /* ── Body layout ── */
+        .body { display: flex; flex: 1; }
+
+        /* ── Left rail ── */
+        .rail {
+            width: 200px;
+            background: var(--panel);
+            border-right: 1px solid var(--border);
+            padding: 12px 0;
+            flex-shrink: 0;
+        }
+        .rail-section-label {
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-3);
+            padding: 8px 16px 4px;
+        }
+        .rail-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 7px 16px;
+            font-size: 12.5px;
+            color: var(--text-2);
+            text-decoration: none;
+            cursor: pointer;
+            border-left: 2px solid transparent;
+        }
+        .rail-link:hover { background: var(--panel2); color: var(--text); border-left-color: var(--border); }
+        .rail-link.active { background: rgba(59,130,246,0.08); color: var(--accent); border-left-color: var(--accent); }
+        .rail-link svg { opacity: 0.6; flex-shrink: 0; }
+        .rail-link.active svg { opacity: 1; }
+        .rail-badge {
+            margin-left: auto;
+            background: rgba(248,113,113,0.15);
+            color: var(--crit);
+            font-size: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 1px 6px;
+            border-radius: 4px;
+        }
+        .rail-badge-ok {
+            margin-left: auto;
+            background: rgba(52,211,153,0.1);
+            color: var(--pass);
+            font-size: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 1px 6px;
+            border-radius: 4px;
+        }
+
+        /* ── Main pane ── */
+        .main { flex: 1; padding: 24px 28px; overflow: auto; }
+
+        /* ── Page header ── */
+        .page-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+        .page-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 4px;
+        }
+        .page-sub {
+            font-size: 12px;
+            color: var(--text-3);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* ── Metric row ── */
+        .metric-row {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .metric-card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px 16px;
+        }
+        .metric-val {
+            font-size: 26px;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            line-height: 1;
+            margin-bottom: 5px;
+        }
+        .metric-label {
+            font-size: 11px;
+            color: var(--text-3);
+        }
+
+        /* ── Submit card ── */
+        .submit-card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px 18px;
+            margin-bottom: 20px;
+        }
+        .submit-card-title {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-2);
+            margin-bottom: 12px;
+        }
+        .submit-input-row {
+            display: flex;
+            gap: 8px;
+        }
+        .submit-input {
+            flex: 1;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            padding: 9px 14px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: var(--text);
+            outline: none;
+        }
+        .submit-input::placeholder { color: var(--text-3); }
+        .submit-input:focus { border-color: var(--accent); }
+        .submit-go {
+            background: var(--accent);
+            color: #fff;
+            font-family: inherit;
+            font-size: 12px;
+            font-weight: 500;
+            padding: 9px 20px;
+            border-radius: 7px;
+            border: none;
+            cursor: pointer;
+        }
+        .submit-go:hover { background: var(--accent2); }
+        .submit-options {
+            display: flex;
+            gap: 16px;
+            margin-top: 10px;
+        }
+        .opt-label {
+            font-size: 11px;
+            color: var(--text-3);
+            margin-right: 6px;
+        }
+        .opt-select {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            color: var(--text-2);
+            font-size: 11px;
+            padding: 3px 8px;
+            font-family: inherit;
+            outline: none;
+        }
+
+        /* ── Scans table ── */
+        .scans-card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .scans-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--border);
+        }
+        .scans-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .filter-pills {
+            display: flex;
+            gap: 6px;
+        }
+        .pill {
+            font-size: 11px;
+            padding: 3px 10px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            color: var(--text-3);
+            cursor: pointer;
+        }
+        .pill.active { background: rgba(59,130,246,0.12); color: var(--accent); border-color: rgba(59,130,246,0.3); }
+
+        .table-head {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr 100px 90px;
+            gap: 8px;
+            padding: 8px 18px;
+            border-bottom: 1px solid var(--border2);
+            background: var(--panel2);
+        }
+        .th {
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-3);
+        }
+
+        .scan-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr 100px 90px;
+            gap: 8px;
+            padding: 12px 18px;
+            border-bottom: 1px solid var(--border2);
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+        .scan-row:last-child { border-bottom: none; }
+        .scan-row:hover { background: var(--panel2); }
+
+        .pkg-name { font-weight: 500; color: var(--text); font-size: 13px; }
+        .pkg-sub { font-size: 11px; color: var(--text-3); font-family: 'JetBrains Mono', monospace; margin-top: 1px; }
+
+        .eco-pill {
+            display: inline-flex;
+            align-items: center;
+            font-size: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: var(--panel2);
+            border: 1px solid var(--border);
+            color: var(--text-2);
+        }
+
+        .sev-bar {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+        }
+        .sev-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+        .verdict-badge {
+            font-size: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            padding: 3px 9px;
+            border-radius: 5px;
+            display: inline-block;
+        }
+        .vb-reject   { background: rgba(248,113,113,0.1); color: var(--crit); border: 1px solid rgba(248,113,113,0.2); }
+        .vb-approve  { background: rgba(52,211,153,0.08); color: var(--pass); border: 1px solid rgba(52,211,153,0.2); }
+        .vb-cond     { background: rgba(251,191,36,0.08); color: var(--med);  border: 1px solid rgba(251,191,36,0.2); }
+        .vb-running  { background: rgba(59,130,246,0.08); color: var(--accent); border: 1px solid rgba(59,130,246,0.2); }
+
+        .ts { font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--text-3); }
+
+        /* ── Right panel ── */
+        .right-panel {
+            width: 260px;
+            border-left: 1px solid var(--border);
+            background: var(--panel);
+            padding: 20px 16px;
+            flex-shrink: 0;
+        }
+        .rp-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-3);
+            margin-bottom: 14px;
+        }
+        .check-list-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0;
+            border-bottom: 1px solid var(--border2);
+            font-size: 11.5px;
+            color: var(--text-2);
+        }
+        .check-list-item:last-child { border-bottom: none; }
+        .cli-icon {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        .cli-ok   { background: rgba(52,211,153,0.12); color: var(--pass); }
+        .cli-warn { background: rgba(251,191,36,0.1);  color: var(--med);  }
+        .cli-na   { background: var(--panel2); color: var(--text-3); }
+
+        .divider { height: 1px; background: var(--border); margin: 18px 0; }
+    </style>
+</head>
+<body>
+
+    <!-- Top bar -->
+    <div class="topbar">
+        <div class="logo">
+            <div class="logo-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+            </div>
+            OSS Watchdog
+        </div>
+        <nav class="topbar-nav">
+            <a href="#" class="active">Dashboard</a>
+            <a href="#">Reports</a>
+            <a href="#">History</a>
+            <a href="#">API</a>
+        </nav>
+        <div class="topbar-right">
+            <div class="topbar-meta">SOP v1.4</div>
+            <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-3);">
+                <div class="status-dot"></div> Engine ready
+            </div>
+            <button class="scan-btn" onclick="window.location.href='analyzing.html'">+ New Scan</button>
+        </div>
+    </div>
+
+    <div class="body">
+
+        <!-- Rail -->
+        <nav class="rail">
+            <div class="rail-section-label">Analysis</div>
+            <a class="rail-link active" href="#">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+                Dashboard
+            </a>
+            <a class="rail-link" href="#">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                Reports
+                <span class="rail-badge">2 new</span>
+            </a>
+            <a class="rail-link" href="#">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                Scan History
+            </a>
+
+            <div class="rail-section-label" style="margin-top:10px;">Checks</div>
+            <a class="rail-link" href="#"><span style="width:14px;font-size:10px;color:inherit;">N</span>Network</a>
+            <a class="rail-link" href="#"><span style="width:14px;font-size:10px;color:inherit;">T</span>Telemetry</a>
+            <a class="rail-link" href="#"><span style="width:14px;font-size:10px;color:inherit;">C</span>Code Safety</a>
+            <a class="rail-link" href="#"><span style="width:14px;font-size:10px;color:inherit;">D</span>Dependencies</a>
+            <a class="rail-link" href="#"><span style="width:14px;font-size:10px;color:inherit;">S</span>Supply Chain</a>
+
+            <div class="rail-section-label" style="margin-top:10px;">Settings</div>
+            <a class="rail-link" href="#">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                SOP Config
+            </a>
+        </nav>
+
+        <!-- Main -->
+        <div class="main">
+
+            <div class="page-header">
+                <div>
+                    <div class="page-title">Security Dashboard</div>
+                    <div class="page-sub">oss-security-analyzer.sop.md · Zero-trust posture · 2026-02-25</div>
+                </div>
+            </div>
+
+            <!-- Metrics -->
+            <div class="metric-row">
+                <div class="metric-card">
+                    <div class="metric-val">6</div>
+                    <div class="metric-label">Total Scans</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-val" style="color:var(--pass);">4</div>
+                    <div class="metric-label">Approved</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-val" style="color:var(--med);">1</div>
+                    <div class="metric-label">With Conditions</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-val" style="color:var(--crit);">2</div>
+                    <div class="metric-label">Rejected</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-val" style="color:var(--accent);">1</div>
+                    <div class="metric-label">Running</div>
+                </div>
+            </div>
+
+            <!-- Submit -->
+            <div class="submit-card">
+                <div class="submit-card-title">Submit a package for analysis</div>
+                <div class="submit-input-row">
+                    <input class="submit-input" type="text" placeholder="https://github.com/owner/repo  or  package@version">
+                    <button class="submit-go" onclick="window.location.href='analyzing.html'">Scan →</button>
+                </div>
+                <div class="submit-options">
+                    <div style="display:flex;align-items:center;">
+                        <span class="opt-label">Ecosystem</span>
+                        <select class="opt-select">
+                            <option>auto-detect</option>
+                            <option>npm</option>
+                            <option>pip</option>
+                            <option>cargo</option>
+                        </select>
+                    </div>
+                    <div style="display:flex;align-items:center;">
+                        <span class="opt-label">Min Severity</span>
+                        <select class="opt-select">
+                            <option>low</option>
+                            <option>medium</option>
+                            <option>high</option>
+                        </select>
+                    </div>
+                    <div style="font-size:11px;color:var(--text-3);margin-left:auto;align-self:center;">
+                        Shallow clone · cleaned up after run
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scans table -->
+            <div class="scans-card">
+                <div class="scans-header">
+                    <div class="scans-title">Recent Scans</div>
+                    <div class="filter-pills">
+                        <div class="pill active">All</div>
+                        <div class="pill">Rejected</div>
+                        <div class="pill">With Conditions</div>
+                        <div class="pill">Approved</div>
+                    </div>
+                </div>
+
+                <div class="table-head">
+                    <span class="th">Package</span>
+                    <span class="th">Ecosystem</span>
+                    <span class="th">Risk</span>
+                    <span class="th">Findings</span>
+                    <span class="th">Verdict</span>
+                    <span class="th">Date</span>
+                </div>
+
+                <div class="scan-row" onclick="window.location.href='report-openclaw.html'">
+                    <div>
+                        <div class="pkg-name">openclaw/openclaw</div>
+                        <div class="pkg-sub">commit 975c9f4 · shallow</div>
+                    </div>
+                    <span class="eco-pill">node · pnpm</span>
+                    <div class="sev-bar"><span class="sev-dot" style="background:var(--crit);box-shadow:0 0 5px var(--crit);"></span><span style="color:var(--crit);">HIGH</span></div>
+                    <span style="font-size:11px;color:var(--text-3);">curl|bash, eval, high-priv perms</span>
+                    <span class="verdict-badge vb-reject">REJECT</span>
+                    <span class="ts">2026-02-25</span>
+                </div>
+
+                <div class="scan-row" onclick="window.location.href='report-full.html'">
+                    <div>
+                        <div class="pkg-name">VectifyAI/PageIndex</div>
+                        <div class="pkg-sub">commit a061d53 · shallow</div>
+                    </div>
+                    <span class="eco-pill">python · pip</span>
+                    <div class="sev-bar"><span class="sev-dot" style="background:var(--med);box-shadow:0 0 5px var(--med);"></span><span style="color:var(--med);">MEDIUM</span></div>
+                    <span style="font-size:11px;color:var(--text-3);">LLM data transfer, no lockfile</span>
+                    <span class="verdict-badge vb-cond">CONDITIONS</span>
+                    <span class="ts">2026-02-25</span>
+                </div>
+
+                <div class="scan-row">
+                    <div>
+                        <div class="pkg-name">facebook/react</div>
+                        <div class="pkg-sub">commit 3c9d818 · shallow</div>
+                    </div>
+                    <span class="eco-pill">javascript · npm</span>
+                    <div class="sev-bar"><span class="sev-dot" style="background:var(--pass);box-shadow:0 0 5px var(--pass);"></span><span style="color:var(--pass);">LOW</span></div>
+                    <span style="font-size:11px;color:var(--text-3);">No deceptive patterns</span>
+                    <span class="verdict-badge vb-approve">APPROVE</span>
+                    <span class="ts">2026-02-20</span>
+                </div>
+
+                <div class="scan-row">
+                    <div>
+                        <div class="pkg-name">axios/axios</div>
+                        <div class="pkg-sub">commit 6780b18 · shallow</div>
+                    </div>
+                    <span class="eco-pill">javascript · npm</span>
+                    <div class="sev-bar"><span class="sev-dot" style="background:var(--pass);box-shadow:0 0 5px var(--pass);"></span><span style="color:var(--pass);">LOW</span></div>
+                    <span style="font-size:11px;color:var(--text-3);">Expected network patterns</span>
+                    <span class="verdict-badge vb-approve">APPROVE</span>
+                    <span class="ts">2026-02-18</span>
+                </div>
+
+                <div class="scan-row">
+                    <div>
+                        <div class="pkg-name">torvalds/linux</div>
+                        <div class="pkg-sub">commit HEAD · shallow</div>
+                    </div>
+                    <span class="eco-pill">C · make</span>
+                    <div class="sev-bar"><span class="sev-dot" style="background:var(--accent);animation:pulse 2s ease infinite;"></span><span style="color:var(--accent);">—</span></div>
+                    <span style="font-size:11px;color:var(--text-3);">Binary scan in progress...</span>
+                    <span class="verdict-badge vb-running">RUNNING</span>
+                    <span class="ts">just now</span>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right panel -->
+        <div class="right-panel">
+            <div class="rp-title">SOP Checklist</div>
+            <div style="font-size:11px;color:var(--text-3);margin-bottom:12px;">17 checks · oss-security-analyzer v1.4</div>
+
+            <div class="check-list-item"><div class="cli-icon cli-ok">✓</div>Network &amp; Communication</div>
+            <div class="check-list-item"><div class="cli-icon cli-ok">✓</div>Telemetry &amp; Analytics</div>
+            <div class="check-list-item"><div class="cli-icon cli-ok">✓</div>Data Collection &amp; Privacy</div>
+            <div class="check-list-item"><div class="cli-icon cli-warn">!</div>Code Safety</div>
+            <div class="check-list-item"><div class="cli-icon cli-ok">✓</div>Binary Files</div>
+            <div class="check-list-item"><div class="cli-icon cli-ok">✓</div>Dependency Audit</div>
+            <div class="check-list-item"><div class="cli-icon cli-warn">!</div>Supply Chain</div>
+            <div class="check-list-item"><div class="cli-icon cli-ok">✓</div>Permissions</div>
+            <div class="check-list-item"><div class="cli-icon cli-ok">✓</div>Build &amp; Install</div>
+            <div class="check-list-item"><div class="cli-icon cli-ok">✓</div>Repository Trust</div>
+            <div class="check-list-item"><div class="cli-icon cli-ok">✓</div>Claim Verification</div>
+            <div class="check-list-item"><div class="cli-icon cli-ok">✓</div>Adversarial Deception</div>
+            <div class="check-list-item"><div class="cli-icon cli-ok">✓</div>Red Flags Summary</div>
+
+            <div class="divider"></div>
+
+            <div class="rp-title">Quick Links</div>
+            <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">
+                <a href="report-full.html" style="font-size:12px;color:var(--accent);text-decoration:none;display:flex;align-items:center;gap:6px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/></svg>
+                    VectifyAI/PageIndex report
+                </a>
+                <a href="report-openclaw.html" style="font-size:12px;color:var(--crit);text-decoration:none;display:flex;align-items:center;gap:6px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/></svg>
+                    openclaw/openclaw report
+                </a>
+                <a href="analyzing.html" style="font-size:12px;color:var(--text-3);text-decoration:none;display:flex;align-items:center;gap:6px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    View live scan
+                </a>
+            </div>
+
+            <div class="divider"></div>
+            <div class="rp-title">Engine</div>
+            <div style="font-size:11px;color:var(--text-3);line-height:1.8;font-family:'JetBrains Mono',monospace;">
+                <div>SOP v1.4</div>
+                <div>Zero-trust posture</div>
+                <div>Prompt-injection resistant</div>
+                <div>Shallow clone only</div>
+                <div style="margin-top:8px;color:var(--pass);">● Engine ready</div>
+            </div>
+        </div>
+
+    </div>
+
+    <style>
+        @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+    </style>
+
+</body>
+</html>

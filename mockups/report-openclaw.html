@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Review: openclaw/openclaw | OSS Watchdog</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg:        #0b0b0e;
+            --surface:   #111115;
+            --surface2:  #16161b;
+            --border:    rgba(255,255,255,0.07);
+            --border2:   rgba(255,255,255,0.04);
+            --text:      #e2e2e6;
+            --text-2:    #9393a3;
+            --text-3:    #55555f;
+            --code-bg:   #151519;
+            --code-text: #93c5fd;
+            --critical:  #f87171;
+            --high:      #fb923c;
+            --medium:    #fbbf24;
+            --low:       #4ade80;
+            --pass:      #86efac;
+            --caution:   #fde68a;
+            --accent:    #818cf8;
+        }
+
+        html { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 15px; line-height: 1.75; }
+        body { min-height: 100vh; }
+
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12.5px;
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            padding: 1px 7px;
+            border-radius: 4px;
+            color: var(--code-text);
+        }
+
+        /* ─── Top nav ─── */
+        .top-nav {
+            position: sticky; top: 0; z-index: 100;
+            background: rgba(11, 11, 14, 0.9);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+            padding: 0 32px;
+            height: 52px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-3); }
+        .breadcrumb a { color: var(--text-3); }
+        .breadcrumb a:hover { color: var(--text); text-decoration: none; }
+        .breadcrumb span { color: var(--text-3); }
+        .breadcrumb strong { color: var(--text); font-weight: 500; }
+
+        /* ─── Jump strip ─── */
+        .jump-strip {
+            position: sticky; top: 52px; z-index: 90;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        .jump-strip::-webkit-scrollbar { display: none; }
+        .jump-inner { display: flex; gap: 0; padding: 0 32px; min-width: max-content; }
+        .jump-link {
+            display: flex; align-items: center; gap: 6px;
+            padding: 10px 14px;
+            font-size: 12px; color: var(--text-3);
+            border-bottom: 2px solid transparent;
+            white-space: nowrap; cursor: pointer; text-decoration: none;
+            transition: color 0.12s, border-color 0.12s;
+        }
+        .jump-link:hover { color: var(--text-2); text-decoration: none; }
+        .jump-link.present { color: var(--text-2); }
+        .jump-link.present:hover { color: var(--text); border-bottom-color: var(--border); }
+        .jump-num { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-3); }
+
+        /* ─── Page layout ─── */
+        .page { max-width: 740px; margin: 0 auto; padding: 48px 32px 80px; }
+
+        /* ─── Page header ─── */
+        .page-header { margin-bottom: 52px; }
+        .page-header h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; color: var(--text); margin-bottom: 8px; }
+        .meta-row { display: flex; align-items: center; gap: 20px; font-size: 12px; color: var(--text-3); flex-wrap: wrap; }
+        .meta-item { display: flex; align-items: center; gap: 6px; }
+        .meta-item strong { color: var(--text-2); font-weight: 500; }
+        .meta-dot { color: var(--text-3); }
+
+        /* ─── Section ─── */
+        .section { padding-bottom: 56px; border-bottom: 1px solid var(--border2); margin-bottom: 56px; }
+        .section:last-child { border-bottom: none; padding-bottom: 0; }
+
+        /* ─── Section header ─── */
+        .section-header { display: flex; align-items: baseline; gap: 12px; margin-bottom: 24px; }
+        .section-id { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-3); flex-shrink: 0; }
+        .section-title { font-size: 17px; font-weight: 600; color: var(--text); letter-spacing: -0.01em; }
+        .section-badge { margin-left: auto; flex-shrink: 0; }
+
+        /* ─── Badges ─── */
+        .badge {
+            display: inline-flex; align-items: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10.5px; font-weight: 500;
+            letter-spacing: 0.05em;
+            padding: 3px 8px; border-radius: 5px;
+            white-space: nowrap;
+        }
+        .badge-critical { background: rgba(248,113,113,0.1); color: var(--critical); border: 1px solid rgba(248,113,113,0.2); }
+        .badge-high     { background: rgba(251,146,60,0.1);  color: var(--high);     border: 1px solid rgba(251,146,60,0.2); }
+        .badge-medium   { background: rgba(251,191,36,0.08); color: var(--medium);   border: 1px solid rgba(251,191,36,0.18); }
+        .badge-low      { background: rgba(74,222,128,0.07); color: var(--low);      border: 1px solid rgba(74,222,128,0.15); }
+        .badge-pass     { background: rgba(74,222,128,0.07); color: var(--pass);     border: 1px solid rgba(74,222,128,0.15); }
+        .badge-caution  { background: rgba(253,230,138,0.07); color: var(--caution); border: 1px solid rgba(253,230,138,0.15); }
+
+        /* ─── Finding block ─── */
+        .finding { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 16px; }
+        .finding-header {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 16px;
+            background: var(--surface2);
+            border-bottom: 1px solid var(--border);
+        }
+        .finding-title { font-size: 13.5px; font-weight: 500; color: var(--text); }
+        .finding-body { padding: 16px 18px; }
+        .finding-body p { font-size: 14px; color: var(--text-2); margin-bottom: 12px; }
+        .finding-body p:last-child { margin-bottom: 0; }
+        .finding-body strong { color: var(--text); font-weight: 600; }
+
+        /* ─── Evidence references ─── */
+        .evidence { margin-top: 14px; border-top: 1px solid var(--border2); padding-top: 12px; }
+        .evidence-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-3); margin-bottom: 8px; font-family: 'JetBrains Mono', monospace; }
+        .evidence-item { display: flex; align-items: baseline; gap: 12px; margin-bottom: 5px; font-size: 13px; }
+        .evidence-desc { color: var(--text-3); font-size: 12.5px; }
+
+        /* ─── Check rows ─── */
+        .check-row {
+            display: flex; align-items: flex-start; gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border2);
+            font-size: 14px; color: var(--text-2);
+        }
+        .check-row:last-child { border-bottom: none; }
+        .check-icon {
+            width: 20px; height: 20px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 11px; font-weight: 700; flex-shrink: 0;
+            margin-top: 2px;
+        }
+        .check-icon.ok   { background: rgba(74,222,128,0.1); color: var(--low); border: 1px solid rgba(74,222,128,0.2); }
+        .check-icon.warn { background: rgba(251,191,36,0.1); color: var(--medium); border: 1px solid rgba(251,191,36,0.2); }
+        .check-icon.bad  { background: rgba(248,113,113,0.1); color: var(--critical); border: 1px solid rgba(248,113,113,0.2); }
+        .check-text code { font-size: 12px; }
+
+        /* ─── Recommendation block ─── */
+        .rec-block { border-radius: 10px; padding: 22px 24px; margin-bottom: 24px; }
+        .rec-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; font-family: 'JetBrains Mono', monospace; margin-bottom: 8px; }
+        .rec-verdict { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 16px; }
+        .rec-body { border-top: 1px solid; padding-top: 16px; }
+
+        /* ─── Stat strip ─── */
+        .stat-strip { display: flex; gap: 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 24px; }
+        .stat-item { flex: 1; padding: 16px; border-right: 1px solid var(--border); text-align: center; }
+        .stat-item:last-child { border-right: none; }
+        .stat-val { font-size: 18px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+        .stat-label { font-size: 11px; color: var(--text-3); }
+
+        /* ─── Trust items ─── */
+        .trust-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border2); font-size: 14px; }
+        .trust-item:last-child { border-bottom: none; }
+
+        /* ─── Dep list grid ─── */
+        .dep-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
+        .dep-item { display: flex; align-items: center; justify-content: space-between; background: var(--surface); border: 1px solid var(--border); border-radius: 7px; padding: 9px 14px; }
+        .dep-name { font-size: 13.5px; font-weight: 500; color: var(--text); }
+        .dep-ver  { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-3); }
+
+        /* ─── Remediation list ─── */
+        .rem-item { display: flex; gap: 16px; margin-bottom: 20px; align-items: flex-start; }
+        .rem-num { width: 28px; height: 28px; border-radius: 50%; background: var(--surface2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: var(--text-3); flex-shrink: 0; font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+        .rem-text { font-size: 14px; color: var(--text-2); line-height: 1.65; }
+        .rem-text strong { color: var(--text); font-weight: 600; }
+
+        /* ─── Absent section notice ─── */
+        .absent-notice {
+            border: 1px dashed var(--border);
+            border-radius: 8px;
+            padding: 14px 18px;
+            color: var(--text-3);
+            font-size: 13px;
+            text-align: center;
+        }
+
+        /* ─── Section nav helper ─── */
+        .empty-badge { display: inline-flex; align-items: center; font-size: 10px; padding: 2px 6px; border-radius: 4px; background: var(--surface2); border: 1px solid var(--border); color: var(--text-3); font-family: 'JetBrains Mono', monospace; margin-left: 4px; vertical-align: middle; }
+    </style>
+</head>
+<body>
+
+<!-- ─── Top nav ─── -->
+<nav class="top-nav">
+    <div class="breadcrumb">
+        <a href="index.html">Watchdog</a>
+        <span>/</span>
+        <span>Reports</span>
+        <span>/</span>
+        <strong>openclaw/openclaw</strong>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+        <span class="badge badge-high">HIGH RISK</span>
+        <span class="badge" style="background:rgba(248,113,113,0.06);color:#fca5a5;border:1px solid rgba(248,113,113,0.15);">REJECT</span>
+        <a href="/private/tmp/security-review-openclaw-report.md" style="font-size:12px;color:var(--text-3);display:flex;align-items:center;gap:5px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;text-decoration:none;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            .md
+        </a>
+    </div>
+</nav>
+
+<!-- ─── Jump strip ─── -->
+<div class="jump-strip">
+    <div class="jump-inner">
+        <a href="#exec-summary"  class="jump-link present"><span class="jump-num">01</span>Summary</a>
+        <a href="#repo-info"     class="jump-link present"><span class="jump-num">02</span>Repository</a>
+        <a href="#network"       class="jump-link present"><span class="jump-num">03</span>Network</a>
+        <a href="#telemetry"     class="jump-link present"><span class="jump-num">04</span>Telemetry</a>
+        <a href="#data-privacy"  class="jump-link present"><span class="jump-num">05</span>Data &amp; Privacy</a>
+        <a href="#code-safety"   class="jump-link present"><span class="jump-num">06</span>Code Safety</a>
+        <a href="#binaries"      class="jump-link present"><span class="jump-num">07</span>Binaries</a>
+        <a href="#dependencies"  class="jump-link present"><span class="jump-num">08</span>Dependencies</a>
+        <a href="#supply-chain"  class="jump-link present"><span class="jump-num">09</span>Supply Chain</a>
+        <a href="#permissions"   class="jump-link present"><span class="jump-num">10</span>Permissions</a>
+        <a href="#build-install" class="jump-link present"><span class="jump-num">11</span>Build / Install</a>
+        <a href="#trust"         class="jump-link present"><span class="jump-num">12</span>Trust</a>
+        <a href="#red-flags"     class="jump-link present"><span class="jump-num">13</span>Red Flags</a>
+        <a href="#recommendation" class="jump-link present"><span class="jump-num">14</span>Recommendation</a>
+        <a href="#remediation"   class="jump-link present"><span class="jump-num">15</span>Remediation</a>
+        <a href="#notes"         class="jump-link present"><span class="jump-num">16</span>Notes</a>
+    </div>
+</div>
+
+<!-- ─── Page content ─── -->
+<div class="page">
+
+    <!-- Page header -->
+    <div class="page-header">
+        <h1>openclaw / openclaw</h1>
+        <div class="meta-row">
+            <div class="meta-item">Analyzed <strong>2026-02-25</strong></div>
+            <span class="meta-dot">·</span>
+            <div class="meta-item">Commit <code style="font-size:11.5px;">975c9f4</code></div>
+            <span class="meta-dot">·</span>
+            <div class="meta-item">Node/pnpm · Python · Android · Swift</div>
+            <span class="meta-dot">·</span>
+            <div class="meta-item">SOP <strong>oss-security-analyzer v1.4</strong></div>
+        </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- 01  Executive Summary -->
+    <!-- ════════════════════════════════════════════════ -->
+    <section class="section" id="exec-summary">
+        <div class="section-header">
+            <span class="section-id">01</span>
+            <h2 class="section-title">Executive Summary</h2>
+        </div>
+
+        <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--surface);margin-bottom:24px;">
+            <div style="display:grid;grid-template-columns:1fr auto;padding:8px 16px;border-bottom:1px solid var(--border);background:var(--surface2);">
+                <span style="font-size:11px;font-weight:500;color:var(--text-3);text-transform:uppercase;letter-spacing:0.07em;">Category</span>
+                <span style="font-size:11px;font-weight:500;color:var(--text-3);text-transform:uppercase;letter-spacing:0.07em;">Risk</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr auto;align-items:center;padding:13px 16px;border-bottom:1px solid var(--border2);">
+                <div><div style="font-weight:500;color:var(--text);margin-bottom:2px;">Network &amp; Communication</div><div style="font-size:12.5px;color:var(--text-3);">Large external endpoint surface across many AI/chat providers; SSRF protections and TLS enforcement in gateway paths.</div></div>
+                <span class="badge badge-medium" style="margin-left:20px;flex-shrink:0;">MEDIUM</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr auto;align-items:center;padding:13px 16px;border-bottom:1px solid var(--border2);">
+                <div><div style="font-weight:500;color:var(--text);margin-bottom:2px;">Telemetry &amp; Analytics</div><div style="font-size:12.5px;color:var(--text-3);">Optional OpenTelemetry plugin can export traces/metrics/logs externally when enabled.</div></div>
+                <span class="badge badge-medium" style="margin-left:20px;flex-shrink:0;">MEDIUM</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr auto;align-items:center;padding:13px 16px;border-bottom:1px solid var(--border2);">
+                <div><div style="font-weight:500;color:var(--text);margin-bottom:2px;">Data Collection &amp; Privacy</div><div style="font-size:12.5px;color:var(--text-3);">Android app requests camera/mic/location/SMS/install packages. Browser extension has broad tab/debugger access.</div></div>
+                <span class="badge badge-high" style="margin-left:20px;flex-shrink:0;">HIGH</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr auto;align-items:center;padding:13px 16px;border-bottom:1px solid var(--border2);">
+                <div><div style="font-weight:500;color:var(--text);margin-bottom:2px;">Code Safety</div><div style="font-size:12.5px;color:var(--text-3);">Dynamic <code>eval</code>/<code>new Function</code> in browser tooling; explicit shell execution framework by design.</div></div>
+                <span class="badge badge-high" style="margin-left:20px;flex-shrink:0;">HIGH</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr auto;align-items:center;padding:13px 16px;border-bottom:1px solid var(--border2);">
+                <div><div style="font-weight:500;color:var(--text);margin-bottom:2px;">Dependencies</div><div style="font-size:12.5px;color:var(--text-3);">pnpm audit reports 0 prod vulns; many floating version ranges and beta deps.</div></div>
+                <span class="badge badge-medium" style="margin-left:20px;flex-shrink:0;">MEDIUM</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr auto;align-items:center;padding:13px 16px;border-bottom:1px solid var(--border2);">
+                <div><div style="font-weight:500;color:var(--text);margin-bottom:2px;">Supply Chain</div><div style="font-size:12.5px;color:var(--text-3);">Remote install pattern (<code>curl … | bash</code>) exists in installer and test paths.</div></div>
+                <span class="badge badge-high" style="margin-left:20px;flex-shrink:0;">HIGH</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr auto;align-items:center;padding:13px 16px;border-bottom:1px solid var(--border2);">
+                <div><div style="font-weight:500;color:var(--text);margin-bottom:2px;">Binary Files</div><div style="font-size:12.5px;color:var(--text-3);">Committed <code>gradle-wrapper.jar</code> without in-repo provenance attestation.</div></div>
+                <span class="badge badge-medium" style="margin-left:20px;flex-shrink:0;">MEDIUM</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr auto;align-items:center;padding:13px 16px;">
+                <div><div style="font-weight:500;color:var(--text);margin-bottom:2px;">Repository Trust</div><div style="font-size:12.5px;color:var(--text-3);">Strong community signal (228k★, SECURITY.md present); main branch unprotected, mixed commit signing.</div></div>
+                <span class="badge badge-medium" style="margin-left:20px;flex-shrink:0;">MEDIUM</span>
+            </div>
+        </div>
+
+        <div class="rec-block" style="background:rgba(248,113,113,0.05);border:1px solid rgba(248,113,113,0.15);">
+            <div class="rec-label" style="color:rgba(248,113,113,0.6);">Overall Recommendation</div>
+            <div class="rec-verdict" style="color:#f87171;">REJECT</div>
+            <div class="rec-body" style="border-color:rgba(248,113,113,0.12);">
+                <div class="check-row" style="border-color:rgba(248,113,113,0.08);">
+                    <div class="check-icon bad" style="margin:0;margin-top:2px;">✕</div>
+                    <div class="check-text">Intentionally includes high-risk capabilities: command execution, broad external connectivity, high-privilege platform integrations.</div>
+                </div>
+                <div class="check-row" style="border-color:rgba(248,113,113,0.08);">
+                    <div class="check-icon bad" style="margin:0;margin-top:2px;">✕</div>
+                    <div class="check-text">Install and update paths include remote script execution (<code>curl … | bash</code>).</div>
+                </div>
+                <div class="check-row" style="border-color:rgba(248,113,113,0.08);border-bottom:none;">
+                    <div class="check-icon bad" style="margin:0;margin-top:2px;">✕</div>
+                    <div class="check-text">Capability and permission scope too broad for a privileged endpoint without strong isolation.</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- 02  Repository Information -->
+    <!-- ════════════════════════════════════════════════ -->
+    <section class="section" id="repo-info">
+        <div class="section-header">
+            <span class="section-id">02</span>
+            <h2 class="section-title">Repository Information</h2>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+            <div>
+                <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-3);margin-bottom:4px;">URL</div>
+                <a href="https://github.com/openclaw/openclaw" style="font-size:13.5px;">github.com/openclaw/openclaw</a>
+            </div>
+            <div>
+                <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-3);margin-bottom:4px;">Owner</div>
+                <div style="font-size:13.5px;color:var(--text-2);">openclaw (Organization)</div>
+            </div>
+            <div>
+                <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-3);margin-bottom:4px;">Commit analyzed</div>
+                <code>975c9f4</code> <span style="font-size:12px;color:var(--text-3);">shallow clone --depth 1</span>
+            </div>
+            <div>
+                <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-3);margin-bottom:4px;">Ecosystems</div>
+                <div style="font-size:13px;color:var(--text-2);">Node/pnpm · Python (config only) · Android/Gradle · Swift/Apple</div>
+            </div>
+        </div>
+
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-3);margin-bottom:10px;">Tools used</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:12px;">
+            <span style="background:rgba(74,222,128,0.07);color:var(--low);border:1px solid rgba(74,222,128,0.15);padding:3px 10px;border-radius:5px;">git ✓</span>
+            <span style="background:rgba(74,222,128,0.07);color:var(--low);border:1px solid rgba(74,222,128,0.15);padding:3px 10px;border-radius:5px;">pnpm audit ✓</span>
+            <span style="background:rgba(74,222,128,0.07);color:var(--low);border:1px solid rgba(74,222,128,0.15);padding:3px 10px;border-radius:5px;">govulncheck ✓</span>
+            <span style="background:var(--surface2);color:var(--text-3);border:1px solid var(--border);padding:3px 10px;border-radius:5px;">SemanticSearch — unavailable</span>
+            <span style="background:var(--surface2);color:var(--text-3);border:1px solid var(--border);padding:3px 10px;border-radius:5px;">npm audit — n/a (no package-lock)</span>
+            <span style="background:var(--surface2);color:var(--text-3);border:1px solid var(--border);padding:3px 10px;border-radius:5px;">pip-audit — unavailable</span>
+        </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- 03  Network & Communication -->
+    <!-- ════════════════════════════════════════════════ -->
+    <section class="section" id="network">
+        <div class="section-header">
+            <span class="section-id">03</span>
+            <h2 class="section-title">Network &amp; Communication</h2>
+            <span class="section-badge"><span class="badge badge-medium">MEDIUM</span></span>
+        </div>
+
+        <div class="finding">
+            <div class="finding-header">
+                <span class="badge badge-medium">BROAD</span>
+                <span class="finding-title">Large external endpoint surface across many AI providers</span>
+            </div>
+            <div class="finding-body">
+                <p>High-confidence literal endpoints appear across many integrations — most are explainable by explicit provider/channel integrations.</p>
+                <div class="evidence">
+                    <div class="evidence-label">Observed domains</div>
+                    <div class="evidence-item"><code>api.openai.com</code><span class="evidence-desc">OpenAI integration</span></div>
+                    <div class="evidence-item"><code>api.anthropic.com</code><span class="evidence-desc">Anthropic integration</span></div>
+                    <div class="evidence-item"><code>api.github.com</code><span class="evidence-desc">GitHub integration</span></div>
+                    <div class="evidence-item"><code>api.telegram.org</code><span class="evidence-desc">Telegram channel</span></div>
+                    <div class="evidence-item"><code>graph.microsoft.com</code><span class="evidence-desc">Microsoft/Office integration</span></div>
+                    <div class="evidence-item"><code>openrouter.ai</code><span class="evidence-desc">Model routing integration</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="finding">
+            <div class="finding-header">
+                <span class="badge badge-pass">PASS</span>
+                <span class="finding-title">WebSocket, loopback, and SSRF protections present</span>
+            </div>
+            <div class="finding-body">
+                <p>Gateway client blocks insecure non-loopback <code>ws://</code> usage and requires <code>wss://</code> for remote hosts. Agent gateway URL overrides are constrained to loopback or configured remote gateway. <code>src/infra/net/ssrf.ts</code> contains explicit private/internal IP blocking and hostname restrictions.</p>
+                <div class="evidence">
+                    <div class="evidence-label">References</div>
+                    <div class="evidence-item"><code>src/gateway/client.ts:116</code><span class="evidence-desc">WebSocket insecure loopback guard</span></div>
+                    <div class="evidence-item"><code>src/agents/tools/gateway.ts:56</code><span class="evidence-desc">Gateway URL override restriction</span></div>
+                    <div class="evidence-item"><code>src/infra/net/ssrf.ts</code><span class="evidence-desc">Private IP / SSRF block list</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="check-row">
+            <div class="check-icon ok">✓</div>
+            <div class="check-text">Non-standard port references (<code>:18789</code>) are local/dev gateway paths — no evidence of hidden exfiltration port usage.</div>
+        </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- 04  Telemetry -->
+    <!-- ════════════════════════════════════════════════ -->
+    <section class="section" id="telemetry">
+        <div class="section-header">
+            <span class="section-id">04</span>
+            <h2 class="section-title">Telemetry &amp; Analytics</h2>
+            <span class="section-badge"><span class="badge badge-medium">MEDIUM</span></span>
+        </div>
+
+        <div class="finding">
+            <div class="finding-header">
+                <span class="badge badge-caution">OPT-IN</span>
+                <span class="finding-title">OpenTelemetry diagnostics plugin can emit data externally</span>
+            </div>
+            <div class="finding-body">
+                <p>An optional diagnostics plugin exports traces, metrics, and logs when enabled. Activation is gated behind config flags (<code>cfg.enabled</code> and <code>otel.enabled</code>) — off by default, but represents a real exfiltration path if misconfigured.</p>
+                <div class="evidence">
+                    <div class="evidence-label">References</div>
+                    <div class="evidence-item"><code>extensions/diagnostics-otel/src/service.ts:74</code><span class="evidence-desc">OTel export service initialization</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="check-row">
+            <div class="check-icon ok">✓</div>
+            <div class="check-text">No direct hardcoded third-party analytics SDK (Mixpanel, Segment, Amplitude, etc.) found in primary runtime code paths.</div>
+        </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- 05  Data Collection & Privacy -->
+    <!-- ════════════════════════════════════════════════ -->
+    <section class="section" id="data-privacy">
+        <div class="section-header">
+            <span class="section-id">05</span>
+            <h2 class="section-title">Data Collection &amp; Privacy</h2>
+            <span class="section-badge"><span class="badge badge-high">HIGH</span></span>
+        </div>
+
+        <div class="finding">
+            <div class="finding-header">
+                <span class="badge badge-high">HIGH</span>
+                <span class="finding-title">Android app requests highly sensitive permissions</span>
+            </div>
+            <div class="finding-body">
+                <p>The Android application requests permissions including <strong>location, camera, microphone, SMS access, and the ability to install packages</strong> — a broad capability footprint for a companion app.</p>
+                <div class="evidence">
+                    <div class="evidence-label">References</div>
+                    <div class="evidence-item"><code>apps/android/app/src/main/AndroidManifest.xml:12</code><span class="evidence-desc">Sensitive permission declarations</span></div>
+                    <div class="evidence-item"><code>apps/android/app/src/main/res/xml/network_security_config.xml:4</code><span class="evidence-desc">Cleartext traffic allowed in defined contexts</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="finding">
+            <div class="finding-header">
+                <span class="badge badge-medium">MEDIUM</span>
+                <span class="finding-title">UI state in localStorage; clipboard write on user action</span>
+            </div>
+            <div class="finding-body">
+                <p>UI stores chat state in <code>localStorage</code> and writes to clipboard on user-triggered actions. Keyboard listeners appear tied to shortcut behavior only — no keylogging patterns detected.</p>
+                <div class="evidence">
+                    <div class="evidence-label">References</div>
+                    <div class="evidence-item"><code>ui/src/i18n/lib/translate.ts:22</code><span class="evidence-desc">localStorage usage</span></div>
+                    <div class="evidence-item"><code>ui/src/ui/chat/copy-as-markdown.ts:21</code><span class="evidence-desc">Clipboard write on user action</span></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- 06  Code Safety -->
+    <!-- ════════════════════════════════════════════════ -->
+    <section class="section" id="code-safety">
+        <div class="section-header">
+            <span class="section-id">06</span>
+            <h2 class="section-title">Code Safety</h2>
+            <span class="section-badge"><span class="badge badge-high">HIGH</span></span>
+        </div>
+
+        <div class="finding">
+            <div class="finding-header">
+                <span class="badge badge-high">HIGH</span>
+                <span class="finding-title">Dynamic code execution via <code>eval</code> / <code>new Function</code> in browser tooling</span>
+            </div>
+            <div class="finding-body">
+                <p>Browser interaction tooling constructs and evaluates function bodies dynamically. This is the intended mechanism for browser-context evaluation but is a high-risk primitive — if attacker-controlled input reaches these paths, arbitrary code execution is possible.</p>
+                <div class="evidence">
+                    <div class="evidence-label">References</div>
+                    <div class="evidence-item"><code>src/browser/pw-tools-core.interactions.ts:287</code><span class="evidence-desc">new Function on function body</span></div>
+                    <div class="evidence-item"><code>src/browser/pw-tools-core.interactions.ts:294</code><span class="evidence-desc">eval usage</span></div>
+                    <div class="evidence-item"><code>src/browser/pw-tools-core.interactions.ts:328</code><span class="evidence-desc">new Function on function body</span></div>
+                    <div class="evidence-item"><code>src/browser/pw-tools-core.interactions.ts:334</code><span class="evidence-desc">eval usage</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="finding">
+            <div class="finding-header">
+                <span class="badge badge-high">HIGH</span>
+                <span class="finding-title">Shell/system execution framework — central to node-host functionality</span>
+            </div>
+            <div class="finding-body">
+                <p>Process execution is a core feature, not an incidental capability. An allowlist/policy mechanism exists but is non-trivial and relies on correct configuration to prevent abuse.</p>
+                <div class="evidence">
+                    <div class="evidence-label">References</div>
+                    <div class="evidence-item"><code>src/node-host/invoke.ts:122</code><span class="evidence-desc">Spawns OS commands</span></div>
+                    <div class="evidence-item"><code>src/node-host/invoke-system-run.ts:180</code><span class="evidence-desc">Policy/allowlist machinery</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="finding">
+            <div class="finding-header">
+                <span class="badge badge-high">HIGH</span>
+                <span class="finding-title">macOS installer uses <code>curl … | bash</code> remote script pattern</span>
+            </div>
+            <div class="finding-body">
+                <p>The macOS app installer builds and executes a command of the form <code>curl ... | bash</code>. This pattern is inherently vulnerable to man-in-the-middle attacks and TOFU (trust on first use) failures — the executed script has full host privileges.</p>
+                <div class="evidence">
+                    <div class="evidence-label">References</div>
+                    <div class="evidence-item"><code>apps/macos/Sources/OpenClaw/CLIInstaller.swift:73</code><span class="evidence-desc">curl | bash command construction</span></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- 07  Binary Files -->
+    <!-- ════════════════════════════════════════════════ -->
+    <section class="section" id="binaries">
+        <div class="section-header">
+            <span class="section-id">07</span>
+            <h2 class="section-title">Binary Files</h2>
+            <span class="section-badge"><span class="badge badge-medium">MEDIUM</span></span>
+        </div>
+
+        <div class="finding">
+            <div class="finding-header">
+                <span class="badge badge-caution">CAUTION</span>
+                <span class="finding-title">Committed <code>gradle-wrapper.jar</code> — standard but unattested</span>
+            </div>
+            <div class="finding-body">
+                <p>A Gradle wrapper JAR is committed to the repository. This is common practice but represents a trust dependency — the binary is executed during Android builds. No in-repo provenance attestation (checksum file, SBOM entry) was found.</p>
+                <div class="evidence">
+                    <div class="evidence-label">File</div>
+                    <div class="evidence-item"><code>apps/android/gradle/wrapper/gradle-wrapper.jar</code><span class="evidence-desc">SHA-256: cb0da6751c2b753a16ac168bb354870ebb1e162e9083f116729cec9c781156b8</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="check-row">
+            <div class="check-icon ok">✓</div>
+            <div class="check-text">No additional <code>.exe</code>, <code>.dll</code>, <code>.so</code>, <code>.dylib</code>, <code>.node</code>, or <code>.wasm</code> artifacts found at scan time.</div>
+        </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- 08  Dependencies -->
+    <!-- ════════════════════════════════════════════════ -->
+    <section class="section" id="dependencies">
+        <div class="section-header">
+            <span class="section-id">08</span>
+            <h2 class="section-title">Dependency Analysis</h2>
+            <span class="section-badge"><span class="badge badge-medium">MEDIUM</span></span>
+        </div>
+
+        <div class="stat-strip" style="margin-bottom:20px;">
+            <div class="stat-item"><div class="stat-val">54</div><div class="stat-label">Prod direct</div></div>
+            <div class="stat-item"><div class="stat-val">19</div><div class="stat-label">Dev direct</div></div>
+            <div class="stat-item"><div class="stat-val">1,177</div><div class="stat-label">Prod transitive</div></div>
+            <div class="stat-item"><div class="stat-val">15</div><div class="stat-label">Exact pins</div></div>
+            <div class="stat-item"><div class="stat-val">58</div><div class="stat-label">Floating ranges</div></div>
+        </div>
+
+        <div style="background:rgba(74,222,128,0.05);border:1px solid rgba(74,222,128,0.15);border-radius:8px;padding:14px 18px;display:flex;align-items:center;gap:14px;margin-bottom:20px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <div>
+                <div style="font-size:14px;font-weight:500;color:var(--low);">0 known vulnerabilities</div>
+                <div style="font-size:12px;color:var(--text-3);margin-top:2px;">pnpm audit --prod · info/low/moderate/high/critical all zero · 1,177 prod transitive deps scanned</div>
+            </div>
+        </div>
+
+        <div class="check-row">
+            <div class="check-icon warn">!</div>
+            <div class="check-text">Only 15 of 73 direct deps are exactly pinned. 58 use floating ranges (<code>^</code>/<code>~</code>) — transitive resolution is non-deterministic without lockfile enforcement.</div>
+        </div>
+        <div class="check-row">
+            <div class="check-icon warn">!</div>
+            <div class="check-text">Beta/alpha packages and pre-release versions present in dependency graph — higher risk of undisclosed breaking changes or vulnerabilities.</div>
+        </div>
+        <div class="check-row">
+            <div class="check-icon ok">✓</div>
+            <div class="check-text">No typosquatting indicators detected in direct dependency names.</div>
+        </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- 09  Supply Chain -->
+    <!-- ════════════════════════════════════════════════ -->
+    <section class="section" id="supply-chain">
+        <div class="section-header">
+            <span class="section-id">09</span>
+            <h2 class="section-title">Supply Chain Risks</h2>
+            <span class="section-badge"><span class="badge badge-high">HIGH</span></span>
+        </div>
+
+        <div class="finding">
+            <div class="finding-header">
+                <span class="badge badge-high">HIGH</span>
+                <span class="finding-title">Remote installer uses <code>curl … | bash</code> in multiple paths</span>
+            </div>
+            <div class="finding-body">
+                <p>The macOS installer and docker e2e smoke scripts exercise a <code>curl | bash</code> pattern. This gives the install process full host execution privileges from a remote, unverified script — unacceptable in a privileged corporate environment.</p>
+                <div class="evidence">
+                    <div class="evidence-label">References</div>
+                    <div class="evidence-item"><code>apps/macos/Sources/OpenClaw/CLIInstaller.swift:73</code><span class="evidence-desc">macOS installer command</span></div>
+                    <div class="evidence-item"><code>docker install smoke/e2e scripts</code><span class="evidence-desc">Also exercise curl | bash pattern</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="check-row">
+            <div class="check-icon warn">!</div>
+            <div class="check-text"><code>prepare</code> lifecycle hook in root <code>package.json:106</code> modifies git hooks path at install time.</div>
+        </div>
+        <div class="check-row">
+            <div class="check-icon ok">✓</div>
+            <div class="check-text">Lockfile (<code>pnpm-lock.yaml</code>) exists; overrides include several explicit security-related package pins.</div>
+        </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- 10  Permissions -->
+    <!-- ════════════════════════════════════════════════ -->
+    <section class="section" id="permissions">
+        <div class="section-header">
+            <span class="section-id">10</span>
+            <h2 class="section-title">Permissions Analysis</h2>
+            <span class="section-badge"><span class="badge badge-high">HIGH</span></span>
+        </div>
+
+        <div class="finding">
+            <div class="finding-header">
+                <span class="badge badge-high">HIGH</span>
+                <span class="finding-title">Browser extension requests <code>debugger</code> + <code>tabs</code> — sensitive combination</span>
+            </div>
+            <div class="finding-body">
+                <p>The Chrome extension manifest requests <code>debugger</code>, <code>tabs</code>, <code>activeTab</code>, <code>storage</code>, <code>alarms</code>, and <code>webNavigation</code> permissions. Host permissions are limited to loopback. The <code>debugger</code> + <code>tabs</code> combination gives near-total control over browser activity and should be treated as high-sensitivity.</p>
+                <div class="evidence">
+                    <div class="evidence-label">References</div>
+                    <div class="evidence-item"><code>assets/chrome-extension/manifest.json:12</code><span class="evidence-desc">Permission declarations</span></div>
+                    <div class="evidence-item"><code>assets/chrome-extension/manifest.json:13</code><span class="evidence-desc">Host permissions (loopback only)</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="finding">
+            <div class="finding-header">
+                <span class="badge badge-high">HIGH</span>
+                <span class="finding-title">Android app — camera, mic, location, SMS, install packages</span>
+            </div>
+            <div class="finding-body">
+                <p>Android manifest declares a wide set of high-sensitivity permissions. Combined with cleartext traffic allowances in defined contexts, this presents a significant data-access footprint on mobile endpoints.</p>
+                <div class="evidence">
+                    <div class="evidence-label">References</div>
+                    <div class="evidence-item"><code>apps/android/app/src/main/AndroidManifest.xml:12</code><span class="evidence-desc">High-sensitivity permission declarations</span></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- 11  Build / Install -->
+    <!-- ════════════════════════════════════════════════ -->
+    <section class="section" id="build-install">
+        <div class="section-header">
+            <span class="section-id">11</span>
+            <h2 class="section-title">Build &amp; Install Process</h2>
+            <span class="section-badge"><span class="badge badge-medium">MEDIUM</span></span>
+        </div>
+
+        <p style="color:var(--text-2);margin-bottom:20px;">Build and restart tooling includes OS service management (<code>systemctl</code>, <code>launchctl</code>) and helper scripts. Security model docs explicitly describe host-trust assumptions and exec behavior — this reduces ambiguity but confirms elevated risk in privileged contexts.</p>
+
+        <div class="check-row">
+            <div class="check-icon ok">✓</div>
+            <div class="check-text">No evidence of install scripts modifying OS trust stores, certificates, or system hosts file in a hidden way.</div>
+        </div>
+        <div class="check-row">
+            <div class="check-icon warn">!</div>
+            <div class="check-text">OS service management calls (<code>systemctl</code>, <code>launchctl</code>) present in build/restart tooling — appropriate for a local AI agent but high-impact on a privileged machine.</div>
+        </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- 12  Repository Trust -->
+    <!-- ════════════════════════════════════════════════ -->
+    <section class="section" id="trust">
+        <div class="section-header">
+            <span class="section-id">12</span>
+            <h2 class="section-title">Repository Trust Assessment</h2>
+            <span class="section-badge"><span class="badge badge-medium">MEDIUM</span></span>
+        </div>
+
+        <div class="stat-strip">
+            <div class="stat-item"><div class="stat-val">228,434</div><div class="stat-label">Stars</div></div>
+            <div class="stat-item"><div class="stat-val">43,780</div><div class="stat-label">Forks</div></div>
+            <div class="stat-item"><div class="stat-val">7,648</div><div class="stat-label">Open Issues</div></div>
+            <div class="stat-item"><div class="stat-val">~900</div><div class="stat-label">Contributors</div></div>
+            <div class="stat-item"><div class="stat-val" style="font-size:14px;font-family:'JetBrains Mono',monospace;">2025-11-24</div><div class="stat-label">Created</div></div>
+        </div>
+
+        <div class="trust-item">
+            <span style="color:var(--text-2);">SECURITY.md</span>
+            <span class="badge badge-pass">Present ✓</span>
+        </div>
+        <div class="trust-item">
+            <span style="color:var(--text-2);">Default branch protection (<code>main</code>)</span>
+            <span class="badge badge-high">protected = false</span>
+        </div>
+        <div class="trust-item">
+            <span style="color:var(--text-2);">Commit signing</span>
+            <span class="badge badge-caution">Mixed — some signed, some unsigned</span>
+        </div>
+        <div class="trust-item">
+            <span style="color:var(--text-2);">Last push</span>
+            <span style="color:var(--text-3);font-size:13px;">2026-02-25 (active)</span>
+        </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- 13  Red Flags -->
+    <!-- ════════════════════════════════════════════════ -->
+    <section class="section" id="red-flags">
+        <div class="section-header">
+            <span class="section-id">13</span>
+            <h2 class="section-title">Red Flags Summary</h2>
+        </div>
+
+        <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--surface);">
+            <div style="display:grid;grid-template-columns:1fr auto;padding:8px 16px;border-bottom:1px solid var(--border);background:var(--surface2);">
+                <span style="font-size:11px;font-weight:500;color:var(--text-3);text-transform:uppercase;letter-spacing:0.07em;">Check</span>
+                <span style="font-size:11px;font-weight:500;color:var(--text-3);text-transform:uppercase;letter-spacing:0.07em;">Result</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border2);gap:16px;">
+                <div style="display:flex;align-items:center;gap:10px;"><div class="check-icon ok" style="margin:0;flex-shrink:0;">✓</div><span style="font-size:13.5px;color:var(--text-2);">Obfuscated code without reason</span></div>
+                <span class="badge badge-pass" style="flex-shrink:0;">PASS</span>
+            </div>
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border2);gap:16px;background:rgba(251,191,36,0.03);">
+                <div style="display:flex;align-items:flex-start;gap:10px;"><div class="check-icon warn" style="margin:0;flex-shrink:0;margin-top:1px;">!</div><div><span style="font-size:13.5px;color:var(--text-2);">Unexplained network calls to unknown domains</span><div style="font-size:12px;color:var(--text-3);margin-top:2px;">Broad endpoint set; most map to explicit integrations. Some placeholder/synthetic hosts appear.</div></div></div>
+                <span class="badge badge-caution" style="flex-shrink:0;margin-top:1px;">CAUTION</span>
+            </div>
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border2);gap:16px;background:rgba(251,191,36,0.03);">
+                <div style="display:flex;align-items:flex-start;gap:10px;"><div class="check-icon warn" style="margin:0;flex-shrink:0;margin-top:1px;">!</div><div><span style="font-size:13.5px;color:var(--text-2);">Committed binaries without source</span><div style="font-size:12px;color:var(--text-3);margin-top:2px;"><code>gradle-wrapper.jar</code> present — standard Gradle pattern but still a binary trust dependency.</div></div></div>
+                <span class="badge badge-caution" style="flex-shrink:0;margin-top:1px;">CAUTION</span>
+            </div>
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border2);gap:16px;background:rgba(251,191,36,0.03);">
+                <div style="display:flex;align-items:flex-start;gap:10px;"><div class="check-icon warn" style="margin:0;flex-shrink:0;margin-top:1px;">!</div><div><span style="font-size:13.5px;color:var(--text-2);">Excessive permissions without justification</span><div style="font-size:12px;color:var(--text-3);margin-top:2px;">Extension debugger+tabs + Android camera/mic/location/SMS/install — broad and sensitive.</div></div></div>
+                <span class="badge badge-caution" style="flex-shrink:0;margin-top:1px;">CAUTION</span>
+            </div>
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border2);gap:16px;background:rgba(251,191,36,0.03);">
+                <div style="display:flex;align-items:flex-start;gap:10px;"><div class="check-icon warn" style="margin:0;flex-shrink:0;margin-top:1px;">!</div><div><span style="font-size:13.5px;color:var(--text-2);">Install scripts changing security settings</span><div style="font-size:12px;color:var(--text-3);margin-top:2px;">Remote installer execution pattern exists (<code>curl | bash</code>).</div></div></div>
+                <span class="badge badge-caution" style="flex-shrink:0;margin-top:1px;">CAUTION</span>
+            </div>
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border2);gap:16px;background:rgba(251,191,36,0.03);">
+                <div style="display:flex;align-items:flex-start;gap:10px;"><div class="check-icon warn" style="margin:0;flex-shrink:0;margin-top:1px;">!</div><div><span style="font-size:13.5px;color:var(--text-2);">Undisclosed telemetry / data collection</span><div style="font-size:12px;color:var(--text-3);margin-top:2px;">OTel plugin can export data when enabled; appears config-gated but represents a live exfiltration path.</div></div></div>
+                <span class="badge badge-caution" style="flex-shrink:0;margin-top:1px;">CAUTION</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border2);gap:16px;">
+                <div style="display:flex;align-items:center;gap:10px;"><div class="check-icon ok" style="margin:0;flex-shrink:0;">✓</div><span style="font-size:13.5px;color:var(--text-2);">Cryptocurrency mining code</span></div>
+                <span class="badge badge-pass" style="flex-shrink:0;">PASS</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 16px;gap:16px;">
+                <div style="display:flex;align-items:center;gap:10px;"><div class="check-icon ok" style="margin:0;flex-shrink:0;">✓</div><span style="font-size:13.5px;color:var(--text-2);">Known malware signatures / patterns</span></div>
+                <span class="badge badge-pass" style="flex-shrink:0;">PASS</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- 14  Recommendation -->
+    <!-- ════════════════════════════════════════════════ -->
+    <section class="section" id="recommendation">
+        <div class="section-header">
+            <span class="section-id">14</span>
+            <h2 class="section-title">Recommendation</h2>
+        </div>
+
+        <div class="rec-block" style="background:rgba(248,113,113,0.05);border:1px solid rgba(248,113,113,0.15);">
+            <div class="rec-label" style="color:rgba(248,113,113,0.6);">Final Decision</div>
+            <div class="rec-verdict" style="color:#f87171;">REJECT</div>
+            <div class="rec-body" style="border-color:rgba(248,113,113,0.12);">
+                <div class="check-row" style="border-color:rgba(248,113,113,0.08);">
+                    <div class="check-icon bad" style="margin:0;margin-top:2px;">✕</div>
+                    <div class="check-text">Codebase intentionally includes command execution, broad external connectivity, and high-privilege platform integrations — not incidental, by design.</div>
+                </div>
+                <div class="check-row" style="border-color:rgba(248,113,113,0.08);">
+                    <div class="check-icon bad" style="margin:0;margin-top:2px;">✕</div>
+                    <div class="check-text">Install and update paths use remote script execution patterns unsuitable for privileged corporate endpoints.</div>
+                </div>
+                <div class="check-row" style="border-color:rgba(248,113,113,0.08);border-bottom:none;">
+                    <div class="check-icon bad" style="margin:0;margin-top:2px;">✕</div>
+                    <div class="check-text">Capability and permission scope is too broad unless running in a strongly isolated environment with strict allowlists.</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- 15  Remediation -->
+    <!-- ════════════════════════════════════════════════ -->
+    <section class="section" id="remediation">
+        <div class="section-header">
+            <span class="section-id">15</span>
+            <h2 class="section-title">Remediation Suggestions</h2>
+        </div>
+
+        <p style="color:var(--text-3);font-size:13px;margin-bottom:24px;">If evaluation is required, <strong style="color:var(--text-2);">APPROVE WITH CONDITIONS</strong> only under strict controls:</p>
+
+        <div class="rem-item">
+            <div class="rem-num">1</div>
+            <div class="rem-text">Run only in an <strong>isolated VM or container</strong> with no privileged corp credentials or host mounts.</div>
+        </div>
+        <div class="rem-item">
+            <div class="rem-num">2</div>
+            <div class="rem-text"><strong>Enforce outbound network allowlists</strong> — permit only the provider domains strictly required for your use case.</div>
+        </div>
+        <div class="rem-item">
+            <div class="rem-num">3</div>
+            <div class="rem-text"><strong>Disable or remove optional telemetry exporters</strong> (<code>diagnostics-otel</code> plugin) unless explicitly needed.</div>
+        </div>
+        <div class="rem-item">
+            <div class="rem-num">4</div>
+            <div class="rem-text"><strong>Disable remote installer one-liners</strong> — use a pinned artifact with checksum/SBOM verification instead of <code>curl | bash</code>.</div>
+        </div>
+        <div class="rem-item">
+            <div class="rem-num">5</div>
+            <div class="rem-text"><strong>Restrict exec tooling by policy</strong> (<code>deny</code>/strict allowlists) and require explicit approvals before any shell execution.</div>
+        </div>
+        <div class="rem-item">
+            <div class="rem-num">6</div>
+            <div class="rem-text"><strong>Verify <code>gradle-wrapper.jar</code> provenance</strong> in CI using Gradle wrapper validation and checksum policy.</div>
+        </div>
+        <div class="rem-item" style="background:rgba(251,191,36,0.04);border:1px solid rgba(251,191,36,0.12);border-radius:8px;padding:14px 16px;">
+            <div class="rem-num" style="background:rgba(251,191,36,0.1);border-color:rgba(251,191,36,0.2);color:var(--medium);">7</div>
+            <div class="rem-text"><strong>Prefer tagged releases and pinned commits.</strong> Require branch protection and signed-release verification before internal adoption.</div>
+        </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- 16  Notes / Limitations -->
+    <!-- ════════════════════════════════════════════════ -->
+    <section class="section" id="notes">
+        <div class="section-header">
+            <span class="section-id">16</span>
+            <h2 class="section-title">Notes &amp; Limitations</h2>
+        </div>
+
+        <div class="check-row">
+            <div class="check-icon warn">i</div>
+            <div class="check-text">Analysis used <strong>static code scanning and metadata inspection</strong> from a shallow clone (<code>--depth 1</code>). Dynamic behavior was not tested.</div>
+        </div>
+        <div class="check-row">
+            <div class="check-icon warn">i</div>
+            <div class="check-text"><code>SemanticSearch</code> tooling was unavailable in this environment — pattern and static analysis was used in its place.</div>
+        </div>
+        <div class="check-row">
+            <div class="check-icon warn">i</div>
+            <div class="check-text">Python-specific vulnerability scanners (<code>pip-audit</code>, <code>safety</code>) were unavailable. Python runtime dependency surface appears minimal from inspected files.</div>
+        </div>
+        <div class="check-row">
+            <div class="check-icon warn">i</div>
+            <div class="check-text"><code>npm audit</code> could not run — repository is pnpm-managed and has no <code>package-lock.json</code>. <code>pnpm audit</code> was used instead.</div>
+        </div>
+    </section>
+
+</div>
+</body>
+</html>

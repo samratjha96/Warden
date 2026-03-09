@@ -5,6 +5,78 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Security Report | OSS Watchdog</title>
     <link rel="stylesheet" href="css/brutal.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        /* Markdown Content Styling */
+        .markdown-body {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 17px;
+            line-height: 1.75;
+            color: var(--ink);
+        }
+        .markdown-body h1 { display: none; }
+        .markdown-body h2 {
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--mid);
+            border-bottom: 2px solid var(--ink);
+            padding-bottom: 8px;
+            margin: 48px 0 24px;
+        }
+        .markdown-body h2 span { color: var(--ink); }
+        .markdown-body h2:first-of-type { margin-top: 0; }
+        .markdown-body h3 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 17px;
+            font-weight: 700;
+            margin: 32px 0 12px;
+        }
+        .markdown-body p { margin-bottom: 16px; }
+        .markdown-body pre {
+            background: var(--ink);
+            color: var(--paper);
+            border: none;
+            padding: 16px 20px;
+            overflow-x: auto;
+            font-family: 'Space Mono', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            margin: 16px 0;
+        }
+        .markdown-body code {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.85em;
+            background: #ebe8e2;
+            padding: 1px 5px;
+        }
+        .markdown-body pre code {
+            background: none;
+            padding: 0;
+            color: inherit;
+        }
+        .markdown-body ul, .markdown-body ol {
+            margin-bottom: 16px;
+            padding-left: 24px;
+        }
+        .markdown-body li { margin-bottom: 8px; }
+        .markdown-body blockquote {
+            border-left: 4px solid var(--amber);
+            margin: 16px 0;
+            padding: 12px 20px;
+            background: rgba(184, 92, 0, 0.08);
+            font-style: italic;
+        }
+        .markdown-body strong { font-weight: 700; }
+        .markdown-body a { color: var(--ink); text-decoration: underline; }
+        .markdown-body hr {
+            border: none;
+            border-top: 1px solid var(--ink);
+            margin: 32px 0;
+        }
+    </style>
 </head>
 <body>
 
@@ -38,7 +110,7 @@
         </div>
     </div>
 
-    <script src="js/app.js"></script>
+    <script src="js/app.js?v=2"></script>
     <script>
         document.getElementById('current-date').textContent = new Date().toISOString().split('T')[0];
         
@@ -53,13 +125,104 @@
                 .then(function(report) {
                     document.title = report.owner + '/' + report.repo + ' — Security Report | OSS Watchdog';
                     document.getElementById('breadcrumb-pkg').textContent = report.owner + ' / ' + report.repo;
-                    App.renderReport(report, document.getElementById('report-container'));
+                    
+                    if (report.format === 'markdown' && report.content) {
+                        renderMarkdownReport(report);
+                    } else {
+                        App.renderReport(report, document.getElementById('report-container'));
+                    }
                 })
                 .catch(function(err) {
                     document.getElementById('report-container').innerHTML = 
                         '<div class="page-wrap"><div class="error-banner">Report not found: ' + App.escapeHtml(reportId) + '</div></div>';
                     document.getElementById('breadcrumb-pkg').textContent = 'Not Found';
                 });
+        }
+        
+        function renderMarkdownReport(report) {
+            var container = document.getElementById('report-container');
+            var stats = report.stats || {};
+            var verdictClass = report.risk === 'high' ? 'risk-high' : 
+                              report.risk === 'medium' ? 'risk-med' : 'risk-low';
+            var verdictText = report.verdict === 'reject' ? 'REJECT' :
+                             report.verdict === 'approve' ? 'APPROVE' : 'CONDITIONAL';
+            
+            // Strip metadata section from markdown before rendering
+            var content = report.content.replace(/---\s*\n+##\s*Metadata[\s\S]*$/, '');
+            
+            var html = '';
+            
+            // Verdict Banner (same as App.renderReport)
+            html += '<div class="verdict-banner">' +
+                '<div>' +
+                    '<div class="verdict-pkg">' + App.escapeHtml(report.owner + ' / ' + report.repo) + '</div>' +
+                    '<div class="verdict-meta">' +
+                        '<strong>commit</strong> ' + App.escapeHtml(report.commit || 'unknown') + ' &nbsp;·&nbsp;' +
+                        '<strong>analyzed</strong> ' + App.escapeHtml(report.analyzed || 'unknown') + ' &nbsp;·&nbsp;' +
+                        '<strong>ecosystem</strong> ' + App.escapeHtml(report.ecosystem || 'unknown') +
+                    '</div>' +
+                '</div>' +
+                '<div class="verdict-risk-col">' +
+                    '<div class="verdict-risk-label">Verdict</div>' +
+                    '<div class="verdict-risk-val ' + verdictClass + '">' + verdictText + '</div>' +
+                    '<div style="font-family:\'Space Mono\',monospace;font-size:10px;color:#666;margin-top:4px;">Risk: ' + (report.risk || 'medium').toUpperCase() + '</div>' +
+                '</div>' +
+            '</div>';
+            
+            // Body grid layout (same structure as App.renderReport)
+            html += '<div class="body-grid">';
+            
+            // Main column with markdown content
+            html += '<div class="main-col">';
+            html += '<div class="markdown-body">';
+            html += marked.parse(content);
+            html += '</div>';
+            html += '</div>';
+            
+            // Sidebar column
+            html += '<div class="side-col">';
+            
+            // Community Trust block
+            html += '<div class="side-block">' +
+                '<div class="side-head">Community Trust</div>' +
+                '<div class="stat-trio">' +
+                    '<div class="stat-trio-item"><div class="stat-num">' + App.escapeHtml(stats.stars || '—') + '</div><div class="stat-lbl">Stars</div></div>' +
+                    '<div class="stat-trio-item"><div class="stat-num">' + App.escapeHtml(stats.forks || '—') + '</div><div class="stat-lbl">Forks</div></div>' +
+                    '<div class="stat-trio-item"><div class="stat-num">' + App.escapeHtml(stats.contributors || '—') + '</div><div class="stat-lbl">Contribs</div></div>' +
+                '</div>' +
+                '<div class="side-body">' +
+                    '<div class="side-row"><span class="side-key">SECURITY.md</span><span class="side-val" style="color:' + (stats.hasSecurityMd ? 'var(--green)' : 'var(--red)') + ';">' + (stats.hasSecurityMd ? 'Present ✓' : 'Missing ✕') + '</span></div>' +
+                    '<div class="side-row"><span class="side-key">Open issues</span><span class="side-val">' + (stats.openIssues || 0) + '</span></div>' +
+                    '<div class="side-row"><span class="side-key">Created</span><span class="side-val">' + App.escapeHtml(stats.created || '—') + '</span></div>' +
+                    '<div class="side-row"><span class="side-key">License</span><span class="side-val">' + App.escapeHtml(stats.license || '—') + '</span></div>' +
+                '</div>' +
+            '</div>';
+            
+            // Verdict block
+            var verdictBadgeClass = report.verdict === 'reject' ? 'rf-fail' :
+                                   report.verdict === 'approve' ? 'rf-pass' : 'rf-caution';
+            html += '<div class="side-block">' +
+                '<div class="side-head">Analysis Verdict</div>' +
+                '<div class="side-body" style="text-align:center;padding:20px 14px;">' +
+                    '<span class="rf-badge ' + verdictBadgeClass + '" style="font-size:14px;padding:8px 16px;">' + verdictText + '</span>' +
+                    '<div style="margin-top:12px;font-family:\'Space Mono\',monospace;font-size:11px;color:var(--mid);">Risk Level: ' + (report.risk || 'medium').toUpperCase() + '</div>' +
+                '</div>' +
+            '</div>';
+            
+            // Key Finding block
+            if (report.keyFinding) {
+                html += '<div class="side-block">' +
+                    '<div class="side-head">Key Finding</div>' +
+                    '<div class="side-body" style="font-size:13px;line-height:1.6;">' +
+                        App.escapeHtml(report.keyFinding) +
+                    '</div>' +
+                '</div>';
+            }
+            
+            html += '</div>'; // side-col
+            html += '</div>'; // body-grid
+            
+            container.innerHTML = html;
         }
     </script>
 </body>

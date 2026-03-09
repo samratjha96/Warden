@@ -46,9 +46,13 @@ var App = (function() {
         if (!id || typeof id !== 'string') {
             return Promise.reject(new Error('Invalid report ID'));
         }
-        // Only allow alphanumeric, hyphens, and underscores
-        var sanitizedId = id.replace(/[^a-zA-Z0-9_-]/g, '');
+        // Only allow alphanumeric, hyphens, underscores, and dots
+        var sanitizedId = id.replace(/[^a-zA-Z0-9_.-]/g, '');
         if (sanitizedId !== id || sanitizedId.length === 0) {
+            return Promise.reject(new Error('Invalid report ID'));
+        }
+        // Prevent path traversal
+        if (sanitizedId.includes('..') || sanitizedId.startsWith('.')) {
             return Promise.reject(new Error('Invalid report ID'));
         }
         return fetchJSON(REPORTS_PATH + sanitizedId + '.json');

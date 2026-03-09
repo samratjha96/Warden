@@ -1,0 +1,345 @@
+{
+  "id": "sindresorhus-ora-abc99999",
+  "url": "https://github.com/sindresorhus/ora",
+  "owner": "sindresorhus",
+  "repo": "ora",
+  "analyzed": "2026-03-08",
+  "sopVersion": "1.4",
+  "commit": "7cf29a75e64409205a6606dada9780ccf5acf6a8",
+  "ecosystems": [
+    "JS/npm"
+  ],
+  "primaryEcosystem": "JS/npm",
+  "verdict": "approve",
+  "risk": "low",
+  "keyFinding": "Well-maintained, popular terminal spinner library with clean security profile and no concerning behavior",
+  "summary": [
+    {
+      "category": "Network & Communication",
+      "risk": "low",
+      "finding": "No network requests found; only documentation URLs in comments and README"
+    },
+    {
+      "category": "Telemetry & Analytics",
+      "risk": "low",
+      "finding": "No analytics, tracking, or telemetry code detected"
+    },
+    {
+      "category": "Data Collection & Privacy",
+      "risk": "low",
+      "finding": "No data collection, fingerprinting, or privacy-invasive functionality"
+    },
+    {
+      "category": "Code Safety",
+      "risk": "low",
+      "finding": "No dynamic code execution, eval, or dangerous patterns found"
+    },
+    {
+      "category": "Binary Files",
+      "risk": "low",
+      "finding": "No binary files committed to repository"
+    },
+    {
+      "category": "Dependencies",
+      "risk": "low",
+      "finding": "8 runtime deps from trusted authors; 3 low severity CVEs in dev-only deps"
+    },
+    {
+      "category": "Supply Chain",
+      "risk": "low",
+      "finding": "No postinstall scripts or lifecycle hooks; clean package.json"
+    },
+    {
+      "category": "Build & Install",
+      "risk": "low",
+      "finding": "Only test script present; no build downloads or suspicious operations"
+    },
+    {
+      "category": "Repository Trust",
+      "risk": "low",
+      "finding": "Excellent community metrics: 9.6k stars, 55 contributors, 0 open issues, active since 2016"
+    },
+    {
+      "category": "Documentation Verification",
+      "risk": "low",
+      "finding": "README accurately describes functionality; code matches documented behavior"
+    }
+  ],
+  "redFlags": [
+    {
+      "check": "Obfuscated code without reason",
+      "status": "pass",
+      "notes": "Code is clean and readable with proper documentation"
+    },
+    {
+      "check": "Unexplained network calls to unknown domains",
+      "status": "pass",
+      "notes": "No network calls found; only documentation URLs"
+    },
+    {
+      "check": "Committed binaries without source",
+      "status": "pass",
+      "notes": "No binary files in repository"
+    },
+    {
+      "check": "Excessive permissions without justification",
+      "status": "pass",
+      "notes": "No special permissions requested; standard Node.js package"
+    },
+    {
+      "check": "Install scripts changing security settings",
+      "status": "pass",
+      "notes": "No install/postinstall scripts present"
+    },
+    {
+      "check": "Undisclosed telemetry / data collection",
+      "status": "pass",
+      "notes": "No telemetry or data collection found"
+    },
+    {
+      "check": "Cryptocurrency mining code",
+      "status": "pass",
+      "notes": "No cryptocurrency-related code detected"
+    },
+    {
+      "check": "Known malware signatures / patterns",
+      "status": "pass",
+      "notes": "No malware patterns or suspicious code structures"
+    }
+  ],
+  "remediation": [],
+  "sidebar": {
+    "community": {
+      "stars": "9628",
+      "forks": "286",
+      "contributors": "55"
+    },
+    "trust": {
+      "securityMd": true,
+      "branchProtection": false,
+      "commitSigning": "none",
+      "openIssues": 0,
+      "created": "2016-03-03"
+    },
+    "dependencies": {
+      "cves": 3,
+      "scanner": "npm audit",
+      "prodTransitive": 8,
+      "directDeps": "8 from trusted authors (sindresorhus ecosystem)",
+      "exactPins": "0 / 8",
+      "floatingRanges": "8 / 8"
+    },
+    "checklist": [
+      {
+        "name": "Network & Communication",
+        "status": "pass"
+      },
+      {
+        "name": "Telemetry & Analytics",
+        "status": "pass"
+      },
+      {
+        "name": "Data Collection & Privacy",
+        "status": "pass"
+      },
+      {
+        "name": "Code Safety",
+        "status": "pass"
+      },
+      {
+        "name": "Binary Files",
+        "status": "pass"
+      },
+      {
+        "name": "Dependency Audit",
+        "status": "warn"
+      },
+      {
+        "name": "Supply Chain",
+        "status": "pass"
+      },
+      {
+        "name": "Permissions",
+        "status": "pass"
+      },
+      {
+        "name": "Build & Install",
+        "status": "pass"
+      },
+      {
+        "name": "Repository Trust",
+        "status": "pass"
+      },
+      {
+        "name": "Claim Verification",
+        "status": "pass"
+      },
+      {
+        "name": "Adversarial Deception",
+        "status": "pass"
+      }
+    ]
+  },
+  "findings": [
+    {
+      "section": "Network & Communication",
+      "sectionNumber": "01",
+      "sectionRisk": "low",
+      "items": [
+        {
+          "severity": "low",
+          "title": "Documentation URLs only",
+          "description": "All URLs found are legitimate GitHub documentation links and author funding links. No network request code detected.",
+          "evidence": [
+            {
+              "file": "package.json:7",
+              "note": "GitHub sponsors funding URL"
+            },
+            {
+              "file": "package.json:11",
+              "note": "Author personal website URL"
+            },
+            {
+              "file": "readme.md",
+              "note": "Multiple GitHub documentation URLs"
+            }
+          ]
+        }
+      ],
+      "checks": [
+        {
+          "status": "ok",
+          "text": "No network request libraries imported"
+        },
+        {
+          "status": "ok",
+          "text": "No fetch, axios, or http.get calls found"
+        },
+        {
+          "status": "ok",
+          "text": "All URLs are documentation/funding related"
+        }
+      ]
+    },
+    {
+      "section": "Code Safety",
+      "sectionNumber": "02",
+      "sectionRisk": "low",
+      "items": [
+        {
+          "severity": "low",
+          "title": "Safe function usage",
+          "description": "Only references to 'Function' are in safe type-checking contexts. No eval or dangerous dynamic execution patterns.",
+          "evidence": [
+            {
+              "file": "index.js:620",
+              "note": "Safe typeof function check: 'const actionIsFunction = typeof action === 'function';'"
+            },
+            {
+              "file": "index.js:623-624",
+              "note": "Type validation: 'if (!actionIsFunction && !actionIsPromise) throw new TypeError'"
+            }
+          ]
+        }
+      ],
+      "checks": [
+        {
+          "status": "ok",
+          "text": "No eval() calls found"
+        },
+        {
+          "status": "ok",
+          "text": "No new Function() constructors"
+        },
+        {
+          "status": "ok",
+          "text": "No shell execution patterns"
+        }
+      ]
+    },
+    {
+      "section": "Dependencies",
+      "sectionNumber": "03",
+      "sectionRisk": "low",
+      "items": [
+        {
+          "severity": "low",
+          "title": "Minor dev dependency vulnerabilities",
+          "description": "3 low severity vulnerabilities found in dev-only dependencies (xo/eslint tooling). These do not affect production usage.",
+          "evidence": [
+            {
+              "file": "npm audit",
+              "note": "@eslint/plugin-kit ReDoS vulnerability in dev dependency"
+            },
+            {
+              "file": "package.json",
+              "note": "8 production dependencies from trusted sindresorhus ecosystem"
+            }
+          ]
+        }
+      ],
+      "checks": [
+        {
+          "status": "ok",
+          "text": "All production dependencies from trusted authors"
+        },
+        {
+          "status": "warn",
+          "text": "3 low severity vulnerabilities in dev dependencies"
+        },
+        {
+          "status": "ok",
+          "text": "No suspicious or typosquatting packages detected"
+        }
+      ]
+    },
+    {
+      "section": "Repository Trust",
+      "sectionNumber": "04",
+      "sectionRisk": "low",
+      "items": [
+        {
+          "severity": "low",
+          "title": "Excellent community metrics",
+          "description": "Well-established repository with strong community engagement and maintenance.",
+          "evidence": [
+            {
+              "file": "GitHub API",
+              "note": "9,628 stars indicating high popularity"
+            },
+            {
+              "file": "GitHub API",
+              "note": "55 contributors showing community involvement"
+            },
+            {
+              "file": "GitHub API",
+              "note": "0 open issues indicating active maintenance"
+            },
+            {
+              "file": ".github/security.md",
+              "note": "Security policy with Tidelift coordination"
+            }
+          ]
+        }
+      ],
+      "checks": [
+        {
+          "status": "ok",
+          "text": "High community engagement (9.6k stars, 286 forks)"
+        },
+        {
+          "status": "ok",
+          "text": "Well-maintained (0 open issues, 55 contributors)"
+        },
+        {
+          "status": "ok",
+          "text": "Established history (created 2016)"
+        },
+        {
+          "status": "ok",
+          "text": "Security policy present"
+        }
+      ]
+    }
+  ]
+}

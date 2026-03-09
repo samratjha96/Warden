@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Review: VectifyAI/PageIndex | OSS Watchdog</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg:        #0b0b0e;
+            --surface:   #111115;
+            --surface2:  #16161b;
+            --border:    rgba(255,255,255,0.07);
+            --border2:   rgba(255,255,255,0.04);
+            --text:      #e2e2e6;
+            --text-2:    #9393a3;
+            --text-3:    #55555f;
+            --code-bg:   #151519;
+            --code-text: #93c5fd;
+            --critical:  #f87171;
+            --high:      #fb923c;
+            --medium:    #fbbf24;
+            --low:       #4ade80;
+            --pass:      #86efac;
+            --caution:   #fde68a;
+            --accent:    #818cf8;
+        }
+
+        html { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 15px; line-height: 1.75; }
+        body { min-height: 100vh; }
+
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12.5px;
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            padding: 1px 7px;
+            border-radius: 4px;
+            color: var(--code-text);
+        }
+
+        /* ─── Top nav ─── */
+        .top-nav {
+            position: sticky; top: 0; z-index: 100;
+            background: rgba(11, 11, 14, 0.9);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+            padding: 0 32px;
+            height: 52px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-3); }
+        .breadcrumb a { color: var(--text-3); }
+        .breadcrumb a:hover { color: var(--text); text-decoration: none; }
+        .breadcrumb span { color: var(--text-3); }
+        .breadcrumb strong { color: var(--text); font-weight: 500; }
+
+        /* ─── Jump strip ─── */
+        .jump-strip {
+            position: sticky; top: 52px; z-index: 90;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        .jump-strip::-webkit-scrollbar { display: none; }
+        .jump-inner { display: flex; gap: 0; padding: 0 32px; min-width: max-content; }
+        .jump-link {
+            display: flex; align-items: center; gap: 6px;
+            padding: 10px 14px;
+            font-size: 12px; color: var(--text-3);
+            border-bottom: 2px solid transparent;
+            white-space: nowrap; cursor: pointer; text-decoration: none;
+            transition: color 0.12s, border-color 0.12s;
+        }
+        .jump-link:hover { color: var(--text-2); text-decoration: none; }
+        .jump-link.present { color: var(--text-2); }
+        .jump-link.present:hover { color: var(--text); border-bottom-color: var(--border); }
+        .jump-num { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-3); }
+
+        /* ─── Page layout ─── */
+        .page { max-width: 740px; margin: 0 auto; padding: 48px 32px 80px; }
+
+        /* ─── Page header ─── */
+        .page-header { margin-bottom: 52px; }
+        .page-header h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; color: var(--text); margin-bottom: 8px; }
+        .meta-row { display: flex; align-items: center; gap: 20px; font-size: 12px; color: var(--text-3); flex-wrap: wrap; }
+        .meta-item { display: flex; align-items: center; gap: 6px; }
+        .meta-item strong { color: var(--text-2); font-weight: 500; }
+        .meta-dot { color: var(--text-3); }
+
+        /* ─── Section ─── */
+        .section { padding-bottom: 56px; border-bottom: 1px solid var(--border2); margin-bottom: 56px; }
+        .section:last-child { border-bottom: none; padding-bottom: 0; }
+
+        .section-header { display: flex; align-items: baseline; gap: 12px; margin-bottom: 24px; }
+        .section-id { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-3); width: 28px; flex-shrink: 0; }
+        .section-title { font-size: 17px; font-weight: 600; color: var(--text); letter-spacing: -0.01em; }
+        .section-badge { margin-left: auto; flex-shrink: 0; }
+
+        /* ─── Badges ─── */
+        .badge {
+            display: inline-flex; align-items: center;
+            font-size: 11px; font-weight: 600; letter-spacing: 0.03em;
+            padding: 3px 9px; border-radius: 5px;
+        }
+        .badge-critical { background: rgba(248,113,113,0.1); color: var(--critical); border: 1px solid rgba(248,113,113,0.2); }
+        .badge-high     { background: rgba(251,146,60,0.1);  color: var(--high);     border: 1px solid rgba(251,146,60,0.2); }
+        .badge-medium   { background: rgba(251,191,36,0.1);  color: var(--medium);   border: 1px solid rgba(251,191,36,0.2); }
+        .badge-low      { background: rgba(74,222,128,0.08); color: var(--low);      border: 1px solid rgba(74,222,128,0.15); }
+        .badge-pass     { background: rgba(134,239,172,0.07);color: var(--pass);     border: 1px solid rgba(134,239,172,0.15); }
+        .badge-caution  { background: rgba(253,230,138,0.07);color: var(--caution);  border: 1px solid rgba(253,230,138,0.15); }
+        .badge-info     { background: rgba(129,140,248,0.08);color: #a5b4fc;         border: 1px solid rgba(129,140,248,0.2); }
+
+        /* ─── Finding block ─── */
+        .finding {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 12px;
+            background: var(--surface);
+        }
+        .finding-header {
+            padding: 14px 18px;
+            display: flex; align-items: center; gap: 12px;
+            border-bottom: 1px solid var(--border2);
+        }
+        .finding-title { font-size: 14px; font-weight: 500; color: var(--text); flex: 1; }
+        .finding-body { padding: 14px 18px; color: var(--text-2); font-size: 14px; line-height: 1.7; }
+        .finding-body p { margin-bottom: 10px; }
+        .finding-body p:last-child { margin-bottom: 0; }
+        .finding-body .evidence { margin-top: 12px; }
+        .finding-body .evidence-label { font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+        .finding-body .evidence-item { display: flex; align-items: baseline; gap: 12px; padding: 4px 0; font-size: 13px; border-bottom: 1px solid var(--border2); }
+        .finding-body .evidence-item:last-child { border-bottom: none; }
+        .finding-body .evidence-desc { color: var(--text-3); font-size: 12.5px; }
+
+        /* ─── Check row (pass/fail list) ─── */
+        .check-row { display: flex; align-items: flex-start; gap: 14px; padding: 11px 0; border-bottom: 1px solid var(--border2); font-size: 14px; }
+        .check-row:last-child { border-bottom: none; }
+        .check-icon { flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; margin-top: 2px; }
+        .check-icon.ok { background: rgba(74,222,128,0.1); color: var(--low); border: 1px solid rgba(74,222,128,0.2); }
+        .check-icon.warn { background: rgba(251,191,36,0.1); color: var(--medium); border: 1px solid rgba(251,191,36,0.2); }
+        .check-icon.fail { background: rgba(248,113,113,0.1); color: var(--critical); border: 1px solid rgba(248,113,113,0.2); }
+        .check-text { color: var(--text-2); flex: 1; }
+        .check-text strong { color: var(--text); font-weight: 500; }
+
+        /* ─── Executive Summary table ─── */
+        .risk-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+        .risk-table th { font-size: 11px; font-weight: 500; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.07em; padding: 8px 14px; border-bottom: 1px solid var(--border); text-align: left; }
+        .risk-table td { padding: 13px 14px; border-bottom: 1px solid var(--border2); vertical-align: top; font-size: 14px; }
+        .risk-table tr:last-child td { border-bottom: none; }
+        .risk-table tr:hover td { background: rgba(255,255,255,0.015); }
+        .risk-table-wrap { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--surface); margin-bottom: 24px; }
+
+        /* ─── Recommendation block ─── */
+        .rec-block {
+            border: 1px solid rgba(251,191,36,0.18);
+            background: rgba(251,191,36,0.04);
+            border-radius: 10px;
+            padding: 24px 28px;
+        }
+        .rec-label { font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+        .rec-verdict { font-size: 20px; font-weight: 700; color: var(--medium); letter-spacing: -0.01em; margin-bottom: 14px; }
+        .rec-body { color: var(--text-2); font-size: 14px; line-height: 1.7; }
+
+        /* ─── Remediation ─── */
+        .rem-item { display: flex; gap: 18px; padding: 18px 0; border-bottom: 1px solid var(--border2); }
+        .rem-item:last-child { border-bottom: none; }
+        .rem-num { width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--text-3); flex-shrink: 0; margin-top: 1px; }
+        .rem-text { color: var(--text-2); font-size: 14px; line-height: 1.7; flex: 1; }
+        .rem-text strong { color: var(--text); font-weight: 500; }
+
+        /* ─── Dep grid ─── */
+        .dep-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
+        .dep-item { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; }
+        .dep-name { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text); }
+        .dep-ver { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-3); }
+
+        /* ─── Stat strip ─── */
+        .stat-strip { display: flex; gap: 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--surface); margin-bottom: 32px; }
+        .stat-item { flex: 1; padding: 16px 20px; border-right: 1px solid var(--border2); }
+        .stat-item:last-child { border-right: none; }
+        .stat-val { font-size: 20px; font-weight: 600; color: var(--text); letter-spacing: -0.02em; }
+        .stat-label { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+
+        /* ─── Info block ─── */
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 32px; }
+        .info-item { }
+        .info-label { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; font-family: 'JetBrains Mono', monospace; }
+        .info-value { font-size: 14px; color: var(--text-2); }
+
+        /* ─── Trust metric bar ─── */
+        .trust-item { display: flex; align-items: center; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid var(--border2); font-size: 14px; }
+        .trust-item:last-child { border-bottom: none; }
+
+        /* ─── Absent section notice ─── */
+        .absent-notice {
+            border: 1px dashed var(--border);
+            border-radius: 8px;
+            padding: 14px 18px;
+            color: var(--text-3);
+            font-size: 13px;
+            text-align: center;
+        }
+
+        /* ─── Section nav helper ─── */
+        .empty-badge { display: inline-flex; align-items: center; font-size: 10px; padding: 2px 6px; border-radius: 4px; background: var(--surface2); border: 1px solid var(--border); color: var(--text-3); font-family: 'JetBrains Mono', monospace; margin-left: 4px; vertical-align: middle; }
+    </style>
+</head>
+<body>
+
+<!-- ─── Top nav ─── -->
+<nav class="top-nav">
+    <div class="breadcrumb">
+        <a href="index.html">Watchdog</a>
+        <span>/</span>
+        <span>Reports</span>
+        <span>/</span>
+        <strong>VectifyAI/PageIndex</strong>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+        <span class="badge badge-medium">MEDIUM RISK</span>
+        <span class="badge" style="background:rgba(251,191,36,0.06);color:#fde68a;border:1px solid rgba(251,191,36,0.15);">APPROVE WITH CONDITIONS</span>
+        <a href="/private/tmp/security-review-report.md" style="font-size:12px;color:var(--text-3);display:flex;align-items:center;gap:5px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;text-decoration:none;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            .md
+        </a>
+    </div>
+</nav>
+
+<!-- ─── Jump strip ─── -->
+<div class="jump-strip">
+    <div class="jump-inner">
+        <a href="#exec-summary"  class="jump-link present"><span class="jump-num">01</span>Summary</a>
+        <a href="#repo-info"     class="jump-link present"><span class="jump-num">02</span>Repository</a>
+        <a href="#network"       class="jump-link present"><span class="jump-num">03</span>Network</a>
+        <a href="#telemetry"     class="jump-link present"><span class="jump-num">04</span>Telemetry</a>
+        <a href="#data-privacy"  class="jump-link present"><span class="jump-num">05</span>Data &amp; Privacy</a>
+        <a href="#code-safety"   class="jump-link present"><span class="jump-num">06</span>Code Safety</a>
+        <a href="#binaries"      class="jump-link present"><span class="jump-num">07</span>Binaries</a>
+        <a href="#dependencies"  class="jump-link present"><span class="jump-num">08</span>Dependencies</a>
+        <a href="#supply-chain"  class="jump-link present"><span class="jump-num">09</span>Supply Chain</a>
+        <a href="#permissions"   class="jump-link present"><span class="jump-num">10</span>Permissions</a>
+        <a href="#build-install" class="jump-link present"><span class="jump-num">11</span>Build / Install</a>
+        <a href="#trust"         class="jump-link present"><span class="jump-num">12</span>Trust</a>
+        <a href="#red-flags"     class="jump-link present"><span class="jump-num">13</span>Red Flags</a>
+        <a href="#recommendation" class="jump-link present"><span class="jump-num">14</span>Recommendation</a>
+        <a href="#remediation"   class="jump-link present"><span class="jump-num">15</span>Remediation</a>
+    </div>
+</div>
+
+<!-- ─── Page content ─── -->
+<div class="page">
+
+    <!-- Page header -->
+    <div class="page-header">
+        <h1>VectifyAI / PageIndex</h1>
+        <div class="meta-row">
+            <div class="meta-item">Analyzed <strong>2026-02-25</strong></div>
+            <span class="meta-dot">·</span>
+            <div class="meta-item">Commit <code style="font-size:11.5px;">a061d53</code></div>
+            <span class="meta-dot">·</span>
+            <div class="meta-item">Python · pip</div>
+            <span class="meta-dot">·</span>
+            <div class="meta-item">SOP <strong>oss-security-analyzer v1.4</strong></div>
+        </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- 01  Executive Summary -->
+    <!-- ════════════════════════════════════════════════ -->
+    <section class="section" id="exec-summary">
+        <div class="section-header">
+            <span class="section-id">01</span>
+            <h2 class="section-title">Executive Summary</h2>
+        </div>
+
+        <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--surface);margin-bottom:24px;">
+            <div style="display:grid;grid-template-columns:1fr auto;padding:8px 16px;border-bottom:1px solid var(--border);background:var(--surface2);">
+                <span style="font-size:11px;font-weight:500;color:var(--text-3);text-transform:uppercase;letter-spacing:0.07em;">Category</span>
+                <span style="font-size:11px;font-weight:500;color:var(--text-3);text-transform:uppercase;letter-spacing:0.07em;">Risk</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr auto;align-items:center;padding:13px 16px;border-bottom:1px solid var(--border2);">
+                <div><div style="font-weight:500;color:var(--text);margin-bottom:2px;">Network &amp; Communication</div><div style="font-size:12.5px;color:var(--text-3);">Core runtime sends document content to OpenAI API. No unexpected external calls.</div></div>
+                <span class="badge badge-medium" style="margin-left:20px;flex-shrink:0;">MEDIUM</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr auto;align-items:center;padding:13px 16px;border-bottom:1px solid var(--border2);">
+                <div><div style="font-weight:500;color:var(--text);margin-bottom:2px;">Telemetry &amp; Analytics</div><div style="font-size:12.5px;color:var(--text-3);">No telemetry SDKs or tracking libraries in runtime code.</div></div>
+                <span class="badge badge-low" style="margin-left:20px;flex-shrink:0;">LOW</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr auto;align-items:center;padding:13px 16px;border-bottom:1px solid var(--border2);">
+                <div><div style="font-weight:500;color:var(--text);margin-bottom:2px;">Data Collection &amp; Privacy</div><div style="font-size:12.5px;color:var(--text-3);">Document text transmitted to third-party LLM API by design. Logs written to <code>./logs</code>.</div></div>
+                <span class="badge badge-medium" style="margin-left:20px;flex-shrink:0;">MEDIUM</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr auto;align-items:center;padding:13px 16px;border-bottom:1px solid var(--border2);">
+                <div><div style="font-weight:500;color:var(--text);margin-bottom:2px;">Code Safety</div><div style="font-size:12.5px;color:var(--text-3);">No <code>eval</code>/<code>exec</code>/subprocess patterns. Uses <code>yaml.safe_load</code>.</div></div>
+                <span class="badge badge-low" style="margin-left:20px;flex-shrink:0;">LOW</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr auto;align-items:center;padding:13px 16px;border-bottom:1px solid var(--border2);">
+                <div><div style="font-weight:500;color:var(--text);margin-bottom:2px;">Binaries</div><div style="font-size:12.5px;color:var(--text-3);">No executable binaries. Test PDFs present (non-executable).</div></div>
+                <span class="badge badge-low" style="margin-left:20px;flex-shrink:0;">LOW</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr auto;align-items:center;padding:13px 16px;border-bottom:1px solid var(--border2);">
+                <div><div style="font-weight:500;color:var(--text);margin-bottom:2px;">Dependencies</div><div style="font-size:12.5px;color:var(--text-3);">6 pinned direct deps. pip-audit found <strong style="color:var(--low);">0 known vulnerabilities</strong>.</div></div>
+                <span class="badge badge-low" style="margin-left:20px;flex-shrink:0;">LOW</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr auto;align-items:center;padding:13px 16px;border-bottom:1px solid var(--border2);">
+                <div><div style="font-weight:500;color:var(--text);margin-bottom:2px;">Supply Chain</div><div style="font-size:12.5px;color:var(--text-3);">No install-time hooks. Lacks hash pinning for transitive dependencies.</div></div>
+                <span class="badge badge-medium" style="margin-left:20px;flex-shrink:0;">MEDIUM</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr auto;align-items:center;padding:13px 16px;">
+                <div><div style="font-weight:500;color:var(--text);margin-bottom:2px;">Repository Trust</div><div style="font-size:12.5px;color:var(--text-3);">Popular (17k★) but no SECURITY.md, unprotected default branch, open security issues.</div></div>
+                <span class="badge badge-medium" style="margin-left:20px;flex-shrink:0;">MEDIUM</span>
+            </div>
+        </div>
+
+        <div class="rec-block">
+            <div class="rec-label">Overall Recommendation</div>
+            <div class="rec-verdict">APPROVE WITH CONDITIONS</div>
+            <div class="rec-body">
+                This repository can be used on a privileged corporate machine <strong>only with controls</strong> around outbound data handling, dependency integrity, and runtime isolation. No malicious execution patterns or install-time persistence were found.
+            </div>
+        </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- 02  Repository Information -->
+    <!-- ════════════════════════════════════════════════ -->
+    <section class="section" id="repo-info">
+        <div class="section-header">
+            <span class="section-id">02</span>
+            <h2 class="section-title">Repository Information</h2>
+        </div>
+
+        <div class="info-grid" style="margin-bottom:24px;">
+            <div class="info-item">
+                <div class="info-label">URL</div>
+                <div class="info-value"><a href="https://github.com/VectifyAI/PageIndex">github.com/VectifyAI/PageIndex</a></div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Owner</div>
+                <div class="info-value">VectifyAI <span style="color:var(--text-3);font-size:13px;">(Organization)</span></div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Ecosystem</div>
+                <div class="info-value">Python · <code>requirements.txt</code></div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Analysis Date</div>
+                <div class="info-value">2026-02-25</div>
+            </div>
+            <div class="info-item" style="grid-column:1/-1;">
+                <div class="info-label">Analyzed Commit (HEAD)</div>
+                <div class="info-value"><code>a061d53fa54db2987920f39a31173be50d14dff3</code> — 2026-02-10</div>
+            </div>
+        </div>
+
+        <div style="font-size:13px;color:var(--text-3);margin-bottom:10px;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.06em;">Scanner availability</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:12px;">
+            <span style="background:rgba(74,222,128,0.07);color:var(--low);border:1px solid rgba(74,222,128,0.15);padding:3px 10px;border-radius:5px;">git ✓</span>
+            <span style="background:rgba(74,222,128,0.07);color:var(--low);border:1px solid rgba(74,222,128,0.15);padding:3px 10px;border-radius:5px;">pip-audit (uvx) ✓</span>
+            <span style="background:var(--surface2);color:var(--text-3);border:1px solid var(--border);padding:3px 10px;border-radius:5px;">SemanticSearch — unavailable</span>
+            <span style="background:var(--surface2);color:var(--text-3);border:1px solid var(--border);padding:3px 10px;border-radius:5px;">npm audit — n/a</span>
+            <span style="background:var(--surface2);color:var(--text-3);border:1px solid var(--border);padding:3px 10px;border-radius:5px;">govulncheck — n/a</span>
+        </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- 03  Network & Communication -->
+    <!-- ════════════════════════════════════════════════ -->
+    <section class="section" id="network">
+        <div class="section-header">
+            <span class="section-id">03</span>
+            <h2 class="section-title">Network &amp; Communication</h2>
+            <span class="section-badge"><span class="badge badge-medium">MEDIUM</span></span>
+        </div>
+
+        <div class="finding">
+            <div class="finding-header">
+                <span class="badge badge-caution">EXPECTED</span>
+                <span class="finding-title">OpenAI API communication — core functional behavior</span>
+            </div>
+            <div class="finding-body">
+                <p>The runtime initializes OpenAI client instances using a caller-supplied API key and sends document content as LLM prompts. This is the core purpose of the library, not a hidden behavior.</p>
+                <div class="evidence">
+                    <div class="evidence-label">References</div>
+                    <div class="evidence-item"><code>pageindex/utils.py:31</code><span class="evidence-desc">openai.OpenAI(api_key=api_key)</span></div>
+                    <div class="evidence-item"><code>pageindex/utils.py:63</code><span class="evidence-desc">openai.OpenAI(api_key=api_key)</span></div>
+                    <div class="evidence-item"><code>pageindex/utils.py:94</code><span class="evidence-desc">openai.AsyncOpenAI(api_key=api_key)</span></div>
+                    <div class="evidence-item"><code>pageindex/page_index.py:29,137,263,526,560</code><span class="evidence-desc">Document text and TOC embedded in prompts</span></div>
+                    <div class="evidence-item"><code>pageindex/utils.py:605-613</code><span class="evidence-desc">Summary generation sends node text to model</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="finding">
+            <div class="finding-header">
+                <span class="badge badge-pass">PASS</span>
+                <span class="finding-title">No hardcoded endpoints, non-standard ports, or WebSocket connections</span>
+            </div>
+            <div class="finding-body">
+                <p>No runtime HTTP endpoints hardcoded in Python source. No non-standard ports or low-level socket/WebSocket usage detected. URLs found in docs and notebooks reference known services only: GitHub, Google Colab, shields.io, Discord, Typeform, and product domains.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- 04  Telemetry -->
+    <!-- ════════════════════════════════════════════════ -->
+    <section class="section" id="telemetry">
+        <div class="section-header">
+            <span class="section-id">04</span>
+            <h2 class="section-title">Telemetry &amp; Analytics</h2>
+            <span class="section-badge"><span class="badge badge-low">LOW</span></span>
+        </div>
+
+        <div class="check-row">
+            <div class="check-icon ok">✓</div>
+            <div class="check-text">No runtime telemetry SDK imports found — <span style="color:var(--text-3);font-family:'JetBrains Mono',monospace;font-size:12.5px;">sentry, mixpanel, segment, amplitude, bugsnag, rollbar</span> all absent.</div>
+        </div>
+        <div class="check-row">
+            <div class="check-icon ok">✓</div>
+            <div class="check-text">No explicit usage-tracking pipeline in executable Python files.</div>
+        </div>
+        <div class="check-row">
+            <div class="check-icon warn">i</div>
+            <div class="check-text">References to "metrics/statistics" appear in notebook content and example text only — not in instrumentation code.</div>
+        </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- 05  Data Collection & Privacy -->
+    <!-- ════════════════════════════════════════════════ -->
+    <section class="section" id="data-privacy">
+        <div class="section-header">
+            <span class="section-id">05</span>
+            <h2 class="section-title">Data Collection &amp; Privacy</h2>
+            <span class="section-badge"><span class="badge badge-medium">MEDIUM</span></span>
+        </div>
+
+        <div class="finding">
+            <div class="finding-header">
+                <span class="badge badge-medium">MEDIUM</span>
+                <span class="finding-title">Document exfiltration to third-party LLM API</span>
+            </div>
+            <div class="finding-body">
+                <p>The tool's core functionality transmits user-supplied document text to OpenAI APIs for parsing and summarization. Risk impact depends on data sensitivity and organization policy.</p>
+                <p>This is by design and documented behavior — but it means <strong>any sensitive documents processed will leave the machine</strong>.</p>
+            </div>
+        </div>
+
+        <div class="finding">
+            <div class="finding-header">
+                <span class="badge badge-caution">LOW–MEDIUM</span>
+                <span class="finding-title">Local logging of processing artifacts</span>
+            </div>
+            <div class="finding-body">
+                <p>JSON logs written under <code>./logs</code> can include extracted TOC text and processing results — potential for residual sensitive document fragments to persist on disk.</p>
+                <div class="evidence">
+                    <div class="evidence-label">References</div>
+                    <div class="evidence-item"><code>pageindex/utils.py:309-346</code><span class="evidence-desc">Writes JSON logs under ./logs</span></div>
+                    <div class="evidence-item"><code>pageindex/page_index.py:1023</code><span class="evidence-desc">Logs check_toc_result, which can include extracted TOC content</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="check-row" style="margin-top:4px;">
+            <div class="check-icon ok">✓</div>
+            <div class="check-text">No clipboard/screen/camera/microphone/keylogging patterns found.</div>
+        </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- 06  Code Safety -->
+    <!-- ════════════════════════════════════════════════ -->
+    <section class="section" id="code-safety">
+        <div class="section-header">
+            <span class="section-id">06</span>
+            <h2 class="section-title">Code Safety</h2>
+            <span class="section-badge"><span class="badge badge-low">LOW</span></span>
+        </div>
+
+        <div class="check-row">
+            <div class="check-icon ok">✓</div>
+            <div class="check-text">No <code>eval()</code>, <code>exec()</code>, <code>subprocess</code>, <code>os.system</code>, or dynamic remote import patterns in Python source.</div>
+        </div>
+        <div class="check-row">
+            <div class="check-icon ok">✓</div>
+            <div class="check-text">No suspicious obfuscation — no large base64 blobs or encoded loaders in <code>.py</code> files.</div>
+        </div>
+        <div class="check-row">
+            <div class="check-icon warn">i</div>
+            <div class="check-text"><code>json.loads</code> called on LLM outputs at <code>utils.py:143</code>, <code>:150</code> — includes exception handling fallback. Dependent on LLM output quality, not a code-level risk.</div>
+        </div>
+        <div class="check-row">
+            <div class="check-icon ok">✓</div>
+            <div class="check-text">YAML parsing uses <code>yaml.safe_load</code> at <code>utils.py:690</code> — preferred over unsafe loaders.</div>
+        </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- 07  Binaries -->
+    <!-- ════════════════════════════════════════════════ -->
+    <section class="section" id="binaries">
+        <div class="section-header">
+            <span class="section-id">07</span>
+            <h2 class="section-title">Binary Files</h2>
+            <span class="section-badge"><span class="badge badge-low">LOW</span></span>
+        </div>
+
+        <div class="check-row">
+            <div class="check-icon ok">✓</div>
+            <div class="check-text">Scan for <code>*.exe</code>, <code>*.dll</code>, <code>*.so</code>, <code>*.dylib</code>, <code>*.node</code>, <code>*.wasm</code> found <strong>nothing</strong> in repository source tree.</div>
+        </div>
+        <div class="check-row">
+            <div class="check-icon warn">i</div>
+            <div class="check-text">Test PDFs present under <code>tests/pdfs/</code> — non-executable binary documents, not a security risk.</div>
+        </div>
+        <div class="check-row">
+            <div class="check-icon ok">✓</div>
+            <div class="check-text">No committed native extensions requiring opaque trust.</div>
+        </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- 08  Dependencies -->
+    <!-- ════════════════════════════════════════════════ -->
+    <section class="section" id="dependencies">
+        <div class="section-header">
+            <span class="section-id">08</span>
+            <h2 class="section-title">Dependency Analysis</h2>
+            <span class="section-badge"><span class="badge badge-low">LOW</span></span>
+        </div>
+
+        <div class="dep-list">
+            <div class="dep-item"><span class="dep-name">openai</span><span class="dep-ver">1.101.0</span></div>
+            <div class="dep-item"><span class="dep-name">pymupdf</span><span class="dep-ver">1.26.4</span></div>
+            <div class="dep-item"><span class="dep-name">PyPDF2</span><span class="dep-ver">3.0.1</span></div>
+            <div class="dep-item"><span class="dep-name">python-dotenv</span><span class="dep-ver">1.1.0</span></div>
+            <div class="dep-item"><span class="dep-name">tiktoken</span><span class="dep-ver">0.11.0</span></div>
+            <div class="dep-item"><span class="dep-name">pyyaml</span><span class="dep-ver">6.0.2</span></div>
+        </div>
+
+        <div style="background:rgba(74,222,128,0.05);border:1px solid rgba(74,222,128,0.15);border-radius:8px;padding:14px 18px;display:flex;align-items:center;gap:14px;margin-bottom:20px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <div>
+                <div style="font-size:14px;font-weight:500;color:var(--low);">0 known vulnerabilities</div>
+                <div style="font-size:12px;color:var(--text-3);margin-top:2px;">pip-audit via uvx · --no-deps --disable-pip · 6 dependencies scanned</div>
+            </div>
+        </div>
+
+        <div class="check-row">
+            <div class="check-icon ok">✓</div>
+            <div class="check-text">All 6 direct dependencies are version-pinned.</div>
+        </div>
+        <div class="check-row">
+            <div class="check-icon warn">!</div>
+            <div class="check-text">No hash pinning or lockfile for transitive dependencies in install instructions.</div>
+        </div>
+        <div class="check-row">
+            <div class="check-icon ok">✓</div>
+            <div class="check-text">No typosquatting indicators detected in direct dependency names.</div>
+        </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- 09  Supply Chain -->
+    <!-- ════════════════════════════════════════════════ -->
+    <section class="section" id="supply-chain">
+        <div class="section-header">
+            <span class="section-id">09</span>
+            <h2 class="section-title">Supply Chain Risks</h2>
+            <span class="section-badge"><span class="badge badge-medium">MEDIUM</span></span>
+        </div>
+
+        <div class="check-row">
+            <div class="check-icon ok">✓</div>
+            <div class="check-text">No lifecycle hooks — <code>preinstall</code>/<code>postinstall</code> absent.</div>
+        </div>
+        <div class="check-row">
+            <div class="check-icon ok">✓</div>
+            <div class="check-text">No <code>setup.py</code> or <code>pyproject.toml</code> with custom install hooks.</div>
+        </div>
+        <div class="check-row">
+            <div class="check-icon ok">✓</div>
+            <div class="check-text">No build-time code download logic found in scanned source.</div>
+        </div>
+        <div class="check-row">
+            <div class="check-icon warn">!</div>
+            <div class="check-text"><strong>Risk:</strong> install relies on <code>pip install -r requirements.txt</code> without hash verification. Transitive supply-chain integrity is not strongly enforced.</div>
+        </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- 10  Permissions -->
+    <!-- ════════════════════════════════════════════════ -->
+    <section class="section" id="permissions">
+        <div class="section-header">
+            <span class="section-id">10</span>
+            <h2 class="section-title">Permissions Analysis</h2>
+            <span class="section-badge"><span class="badge badge-low">LOW</span></span>
+        </div>
+
+        <div class="check-row">
+            <div class="check-icon ok">✓</div>
+            <div class="check-text">No browser extension manifest (<code>manifest.json</code> absent).</div>
+        </div>
+        <div class="check-row">
+            <div class="check-icon ok">✓</div>
+            <div class="check-text">No sudo/admin escalation or privileged OS configuration changes in code.</div>
+        </div>
+        <div class="check-row">
+            <div class="check-icon ok">✓</div>
+            <div class="check-text">No broad host permissions model present.</div>
+        </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- 11  Build / Install -->
+    <!-- ════════════════════════════════════════════════ -->
+    <section class="section" id="build-install">
+        <div class="section-header">
+            <span class="section-id">11</span>
+            <h2 class="section-title">Build &amp; Install Process</h2>
+            <span class="section-badge"><span class="badge badge-low">LOW</span></span>
+        </div>
+
+        <p style="color:var(--text-2);margin-bottom:20px;">Minimal install process. No Makefile, shell installer scripts, or system-level modifications identified.</p>
+
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:18px;margin-bottom:20px;">
+            <div style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text-3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:14px;">Typical run path</div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+                <div style="display:flex;align-items:center;gap:12px;font-size:14px;color:var(--text-2);">
+                    <span style="width:22px;height:22px;border-radius:50%;border:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text-3);flex-shrink:0;">1</span>
+                    Install dependencies: <code>pip install -r requirements.txt</code>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;font-size:14px;color:var(--text-2);">
+                    <span style="width:22px;height:22px;border-radius:50%;border:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text-3);flex-shrink:0;">2</span>
+                    Set <code>CHATGPT_API_KEY</code> in <code>.env</code>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;font-size:14px;color:var(--text-2);">
+                    <span style="width:22px;height:22px;border-radius:50%;border:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text-3);flex-shrink:0;">3</span>
+                    Run <code>python3 run_pageindex.py ...</code>
+                </div>
+            </div>
+        </div>
+
+        <div class="check-row">
+            <div class="check-icon warn">i</div>
+            <div class="check-text">Runtime writes output JSON to <code>./results</code> and logs to <code>./logs</code>.</div>
+        </div>
+        <div class="check-row">
+            <div class="check-icon ok">✓</div>
+            <div class="check-text">No startup-item, PATH, certificate, registry, or hosts-file modifications.</div>
+        </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- 12  Repository Trust -->
+    <!-- ════════════════════════════════════════════════ -->
+    <section class="section" id="trust">
+        <div class="section-header">
+            <span class="section-id">12</span>
+            <h2 class="section-title">Repository Trust Assessment</h2>
+            <span class="section-badge"><span class="badge badge-medium">MEDIUM</span></span>
+        </div>
+
+        <div class="stat-strip">
+            <div class="stat-item"><div class="stat-val">17,529</div><div class="stat-label">Stars</div></div>
+            <div class="stat-item"><div class="stat-val">1,248</div><div class="stat-label">Forks</div></div>
+            <div class="stat-item"><div class="stat-val">83</div><div class="stat-label">Open Issues</div></div>
+            <div class="stat-item"><div class="stat-val">3</div><div class="stat-label">Contributors</div></div>
+            <div class="stat-item"><div class="stat-val" style="font-size:14px;font-family:'JetBrains Mono',monospace;">2025-04-01</div><div class="stat-label">Created</div></div>
+        </div>
+
+        <div class="trust-item">
+            <span style="color:var(--text-2);">SECURITY.md</span>
+            <span class="badge badge-high">Not present</span>
+        </div>
+        <div class="trust-item">
+            <span style="color:var(--text-2);">Default branch protection (<code>main</code>)</span>
+            <span class="badge badge-high">protected = false</span>
+        </div>
+        <div class="trust-item">
+            <span style="color:var(--text-2);">Commit signing</span>
+            <span class="badge badge-caution">Mixed — some signed, some not</span>
+        </div>
+        <div class="trust-item" style="align-items:flex-start;padding:14px 0;">
+            <span style="color:var(--text-2);">Open security issues</span>
+            <div style="text-align:right;font-size:13px;color:var(--text-3);">
+                <div><code>#79</code> Argus security scan report</div>
+                <div><code>#80</code> Responsible disclosure inquiry</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- 13  Red Flags -->
+    <!-- ════════════════════════════════════════════════ -->
+    <section class="section" id="red-flags">
+        <div class="section-header">
+            <span class="section-id">13</span>
+            <h2 class="section-title">Red Flags Summary</h2>
+        </div>
+
+        <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--surface);">
+            <div style="display:grid;grid-template-columns:1fr auto;padding:8px 16px;border-bottom:1px solid var(--border);background:var(--surface2);">
+                <span style="font-size:11px;font-weight:500;color:var(--text-3);text-transform:uppercase;letter-spacing:0.07em;">Check</span>
+                <span style="font-size:11px;font-weight:500;color:var(--text-3);text-transform:uppercase;letter-spacing:0.07em;">Result</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border2);gap:16px;">
+                <div style="display:flex;align-items:center;gap:10px;"><div class="check-icon ok" style="margin:0;flex-shrink:0;">✓</div><span style="font-size:13.5px;color:var(--text-2);">Obfuscated code without reason</span></div>
+                <span class="badge badge-pass" style="flex-shrink:0;">PASS</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border2);gap:16px;">
+                <div style="display:flex;align-items:center;gap:10px;"><div class="check-icon ok" style="margin:0;flex-shrink:0;">✓</div><span style="font-size:13.5px;color:var(--text-2);">Unexplained network calls to unknown domains</span></div>
+                <span class="badge badge-pass" style="flex-shrink:0;">PASS</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border2);gap:16px;">
+                <div style="display:flex;align-items:center;gap:10px;"><div class="check-icon ok" style="margin:0;flex-shrink:0;">✓</div><span style="font-size:13.5px;color:var(--text-2);">Committed binaries without source</span></div>
+                <span class="badge badge-pass" style="flex-shrink:0;">PASS</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border2);gap:16px;">
+                <div style="display:flex;align-items:center;gap:10px;"><div class="check-icon ok" style="margin:0;flex-shrink:0;">✓</div><span style="font-size:13.5px;color:var(--text-2);">Excessive permissions</span></div>
+                <span class="badge badge-pass" style="flex-shrink:0;">PASS</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border2);gap:16px;">
+                <div style="display:flex;align-items:center;gap:10px;"><div class="check-icon ok" style="margin:0;flex-shrink:0;">✓</div><span style="font-size:13.5px;color:var(--text-2);">Install scripts modify security settings</span></div>
+                <span class="badge badge-pass" style="flex-shrink:0;">PASS</span>
+            </div>
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border2);gap:16px;background:rgba(251,191,36,0.03);">
+                <div style="display:flex;align-items:flex-start;gap:10px;"><div class="check-icon warn" style="margin:0;flex-shrink:0;margin-top:1px;">!</div><div><span style="font-size:13.5px;color:var(--text-2);">Undisclosed data collection</span><div style="font-size:12px;color:var(--text-3);margin-top:2px;">Document-to-LLM transfer is user-driven but carries data sensitivity risk</div></div></div>
+                <span class="badge badge-caution" style="flex-shrink:0;margin-top:1px;">CAUTION</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--border2);gap:16px;">
+                <div style="display:flex;align-items:center;gap:10px;"><div class="check-icon ok" style="margin:0;flex-shrink:0;">✓</div><span style="font-size:13.5px;color:var(--text-2);">Cryptocurrency mining code</span></div>
+                <span class="badge badge-pass" style="flex-shrink:0;">PASS</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 16px;gap:16px;">
+                <div style="display:flex;align-items:center;gap:10px;"><div class="check-icon ok" style="margin:0;flex-shrink:0;">✓</div><span style="font-size:13.5px;color:var(--text-2);">Malware signatures / patterns</span></div>
+                <span class="badge badge-pass" style="flex-shrink:0;">PASS</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- 14  Recommendation -->
+    <!-- ════════════════════════════════════════════════ -->
+    <section class="section" id="recommendation">
+        <div class="section-header">
+            <span class="section-id">14</span>
+            <h2 class="section-title">Recommendation</h2>
+        </div>
+
+        <div class="rec-block">
+            <div class="rec-label">Final Decision</div>
+            <div class="rec-verdict">APPROVE WITH CONDITIONS</div>
+            <div class="rec-body">
+                <div class="check-row" style="border-color:rgba(251,191,36,0.1);">
+                    <div class="check-icon ok">✓</div>
+                    <div class="check-text">No malicious execution patterns or install-time persistence behavior were found.</div>
+                </div>
+                <div class="check-row" style="border-color:rgba(251,191,36,0.1);">
+                    <div class="check-icon warn">!</div>
+                    <div class="check-text">Main risk is <strong>data exposure</strong> via external LLM API calls with document content.</div>
+                </div>
+                <div class="check-row" style="border-color:rgba(251,191,36,0.1);border-bottom:none;">
+                    <div class="check-icon warn">!</div>
+                    <div class="check-text">Supply-chain hardening and repository governance indicators can be improved.</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- 15  Remediation -->
+    <!-- ════════════════════════════════════════════════ -->
+    <section class="section" id="remediation">
+        <div class="section-header">
+            <span class="section-id">15</span>
+            <h2 class="section-title">Remediation Suggestions</h2>
+        </div>
+
+        <div class="rem-item">
+            <div class="rem-num">1</div>
+            <div class="rem-text">Restrict usage to <strong>non-sensitive documents</strong> unless legal/compliance approves OpenAI data transfer for this workflow.</div>
+        </div>
+        <div class="rem-item">
+            <div class="rem-num">2</div>
+            <div class="rem-text">Enforce <strong>egress controls</strong> so runtime can only reach approved model endpoints.</div>
+        </div>
+        <div class="rem-item">
+            <div class="rem-num">3</div>
+            <div class="rem-text">Use a <strong>dedicated, scoped API key</strong> and secret manager; avoid <code>.env</code> secrets in shared environments.</div>
+        </div>
+        <div class="rem-item">
+            <div class="rem-num">4</div>
+            <div class="rem-text"><strong>Disable or sanitize logs</strong> for sensitive workloads; securely rotate/delete <code>./logs</code> artifacts after processing.</div>
+        </div>
+        <div class="rem-item">
+            <div class="rem-num">5</div>
+            <div class="rem-text">Add <strong>dependency integrity controls</strong>: <code>--require-hashes</code> in pip, lockfile workflow, or vetted internal mirror.</div>
+        </div>
+        <div class="rem-item">
+            <div class="rem-num">6</div>
+            <div class="rem-text">Prefer running in an <strong>isolated container or VM</strong> with least privilege and outbound network policy.</div>
+        </div>
+        <div class="rem-item" style="background:rgba(129,140,248,0.03);border-radius:8px;padding:14px;border:1px solid rgba(129,140,248,0.1);">
+            <div class="rem-num" style="border-color:rgba(129,140,248,0.3);color:#a5b4fc;">7</div>
+            <div class="rem-text"><strong style="color:#a5b4fc;">For maintainers:</strong> add <code>SECURITY.md</code>, enable branch protection on <code>main</code>, and formalize vulnerability disclosure handling. Security issues <code>#79</code> and <code>#80</code> remain open.</div>
+        </div>
+    </section>
+
+</div>
+
+</body>
+</html>

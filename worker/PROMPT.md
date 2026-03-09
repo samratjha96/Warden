@@ -77,7 +77,9 @@ Check for: `package.json` (npm), `requirements.txt`/`pyproject.toml` (pip), `Car
 - Review build scripts for downloads, env exfiltration
 
 **Repository Trust:**
-- Check stars, contributors, commit history
+- Fetch GitHub stats using: `curl -s "https://api.github.com/repos/{owner}/{repo}" | grep -E '"(stargazers_count|forks_count|open_issues_count|created_at)"'`
+- Get contributor count: `curl -s "https://api.github.com/repos/{owner}/{repo}/contributors?per_page=1&anon=true" -I | grep -i "link:" | grep -oE 'page=[0-9]+' | tail -1 | cut -d= -f2` (or count from response)
+- Check commit history, SECURITY.md presence
 - Verify SECURITY.md claims against code
 
 **Documentation Verification:**

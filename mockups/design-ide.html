@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OSS Watchdog | IDE</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg:       #1e1e1e;
+            --sidebar:  #252526;
+            --panel:    #2d2d30;
+            --panel2:   #333337;
+            --border:   rgba(255,255,255,0.06);
+            --border2:  #3e3e42;
+            --text:     #d4d4d4;
+            --text-2:   #9d9d9d;
+            --text-3:   #5a5a5a;
+            --accent:   #569cd6;
+            --accent2:  #4ec9b0;
+            --string:   #ce9178;
+            --comment:  #6a9955;
+            --keyword:  #c586c0;
+            --err:      #f14c4c;
+            --warn:     #cca700;
+            --info:     #3794ff;
+            --hint:     #3794ff;
+            --pass:     #4ec9b0;
+        }
+
+        html { background: var(--bg); color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+        body { min-height: 100vh; display: flex; flex-direction: column; overflow: hidden; height: 100vh; }
+
+        /* ── Activity bar (far left icons) ── */
+        .activity-bar {
+            width: 48px;
+            background: #333;
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 8px 0;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+        .ab-icon {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            cursor: pointer;
+            color: var(--text-3);
+            border-left: 2px solid transparent;
+        }
+        .ab-icon:hover { color: var(--text-2); }
+        .ab-icon.active { color: var(--text); border-left-color: var(--text); }
+        .ab-bottom { margin-top: auto; }
+
+        /* ── Title bar ── */
+        .title-bar {
+            height: 30px;
+            background: #323233;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            font-size: 12px;
+            color: var(--text-3);
+            gap: 8px;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            user-select: none;
+        }
+        .title-bar-macos {
+            display: flex;
+            gap: 6px;
+            margin-right: 8px;
+        }
+        .macos-dot {
+            width: 12px; height: 12px; border-radius: 50%;
+        }
+
+        /* ── App frame ── */
+        .app-frame { display: flex; flex: 1; overflow: hidden; }
+
+        /* ── Explorer sidebar ── */
+        .explorer {
+            width: 220px;
+            background: var(--sidebar);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+        .explorer-header {
+            padding: 10px 12px 8px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-2);
+            border-bottom: 1px solid var(--border);
+            font-family: 'Inter', sans-serif;
+        }
+        .tree-section {
+            padding: 6px 0;
+        }
+        .tree-folder {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 12px;
+            font-size: 12px;
+            color: var(--text-2);
+            cursor: pointer;
+        }
+        .tree-folder:hover { background: rgba(255,255,255,0.04); }
+        .tree-file {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 12px 3px 28px;
+            font-size: 12px;
+            color: var(--text-2);
+            cursor: pointer;
+            position: relative;
+        }
+        .tree-file:hover { background: rgba(255,255,255,0.04); }
+        .tree-file.active { background: rgba(255,255,255,0.08); color: var(--text); }
+        .tree-file.modified { color: var(--warn); }
+        .tree-file.error { color: var(--err); }
+
+        /* ── Editor area ── */
+        .editor-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* ── Tab bar ── */
+        .tab-bar {
+            height: 35px;
+            background: var(--sidebar);
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            overflow-x: auto;
+            flex-shrink: 0;
+        }
+        .tab-bar::-webkit-scrollbar { display: none; }
+        .tab {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 0 16px;
+            font-size: 12px;
+            color: var(--text-3);
+            border-right: 1px solid var(--border);
+            cursor: pointer;
+            white-space: nowrap;
+            min-width: 0;
+            background: var(--sidebar);
+            border-top: 1px solid transparent;
+        }
+        .tab:hover { color: var(--text-2); }
+        .tab.active {
+            background: var(--bg);
+            color: var(--text);
+            border-top-color: var(--accent);
+            border-bottom-color: var(--bg);
+        }
+        .tab-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+        /* ── Editor content ── */
+        .editor-content {
+            flex: 1;
+            overflow: auto;
+            display: flex;
+        }
+
+        /* ── Line numbers ── */
+        .line-numbers {
+            width: 50px;
+            background: var(--bg);
+            padding: 16px 0;
+            text-align: right;
+            font-size: 12px;
+            line-height: 1.6;
+            color: var(--text-3);
+            border-right: 1px solid var(--border);
+            flex-shrink: 0;
+            user-select: none;
+        }
+        .line-numbers div { padding: 0 10px; }
+
+        /* ── Code view ── */
+        .code-view {
+            flex: 1;
+            padding: 16px 0;
+            font-size: 12.5px;
+            line-height: 1.6;
+            overflow-x: auto;
+        }
+
+        .code-line {
+            display: flex;
+            align-items: flex-start;
+            padding: 0 20px;
+            min-height: 20px;
+        }
+        .code-line:hover { background: rgba(255,255,255,0.03); }
+        .code-line.err-line { background: rgba(241,76,76,0.07); border-left: 2px solid var(--err); padding-left: 18px; }
+        .code-line.warn-line { background: rgba(204,167,0,0.06); border-left: 2px solid var(--warn); padding-left: 18px; }
+        .code-line.pass-line { background: rgba(78,201,176,0.05); border-left: 2px solid var(--pass); padding-left: 18px; }
+        .code-line.section-head { background: rgba(255,255,255,0.02); margin-top: 12px; }
+
+        .kw   { color: var(--keyword); }
+        .str  { color: var(--string); }
+        .fn   { color: #dcdcaa; }
+        .num  { color: #b5cea8; }
+        .cmt  { color: var(--comment); }
+        .cls  { color: var(--accent2); }
+        .var  { color: var(--accent); }
+        .op   { color: var(--text); }
+        .path { color: var(--string); text-decoration: underline; cursor: pointer; }
+
+        /* ── Inline diagnostic ── */
+        .diag {
+            margin-left: 16px;
+            padding: 1px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            align-self: center;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .diag-err  { background: rgba(241,76,76,0.15);  color: #f48771; }
+        .diag-warn { background: rgba(204,167,0,0.15);  color: #d7ba7d; }
+        .diag-pass { background: rgba(78,201,176,0.12); color: var(--pass); }
+        .diag-info { background: rgba(55,148,255,0.12); color: #75beff; }
+
+        /* ── Gutter icons ── */
+        .gutter { width: 18px; flex-shrink: 0; }
+        .g-err  { color: var(--err); font-size: 13px; line-height: 1; }
+        .g-warn { color: var(--warn); font-size: 13px; line-height: 1; }
+        .g-pass { color: var(--pass); font-size: 13px; line-height: 1; }
+        .g-info { color: var(--info); font-size: 13px; line-height: 1; }
+
+        /* ── Problems panel ── */
+        .problems-panel {
+            height: 200px;
+            background: var(--panel);
+            border-top: 1px solid var(--border2);
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        .panel-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border2);
+            background: var(--sidebar);
+            flex-shrink: 0;
+        }
+        .panel-tab {
+            padding: 6px 16px;
+            font-size: 12px;
+            color: var(--text-3);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border-bottom: 1px solid transparent;
+        }
+        .panel-tab.active { color: var(--text); border-bottom-color: var(--accent); }
+        .panel-count {
+            font-size: 10px;
+            padding: 0 5px;
+            border-radius: 10px;
+            background: var(--panel2);
+        }
+        .panel-count.err { background: var(--err); color: #fff; }
+        .panel-count.warn { background: var(--warn); color: #000; }
+
+        .problems-list { overflow-y: auto; flex: 1; padding: 4px 0; }
+        .problem-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 5px 16px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .problem-item:hover { background: rgba(255,255,255,0.04); }
+        .problem-sev {
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+        .problem-msg { color: var(--text-2); flex: 1; }
+        .problem-msg strong { color: var(--text); font-weight: 500; }
+        .problem-loc {
+            font-size: 11px;
+            color: var(--text-3);
+            flex-shrink: 0;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* ── Status bar ── */
+        .status-bar {
+            height: 22px;
+            background: #007acc;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            font-size: 11px;
+            color: rgba(255,255,255,0.9);
+            gap: 16px;
+            flex-shrink: 0;
+        }
+        .status-bar .right { margin-left: auto; display: flex; gap: 14px; }
+        .status-item { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+        .status-item:hover { background: rgba(255,255,255,0.12); padding: 0 4px; border-radius: 2px; }
+
+        /* ── Input overlay (submission) ── */
+        .cmd-palette {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            background: var(--panel);
+            border: 1px solid var(--border2);
+            border-radius: 6px;
+            box-shadow: 0 24px 64px rgba(0,0,0,0.6);
+            z-index: 200;
+            overflow: hidden;
+        }
+        .cmd-input-wrap {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            gap: 10px;
+            border-bottom: 1px solid var(--border2);
+        }
+        .cmd-prefix {
+            font-size: 12px;
+            color: var(--text-3);
+            white-space: nowrap;
+        }
+        .cmd-field {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            color: var(--text);
+        }
+        .cmd-field::placeholder { color: var(--text-3); }
+        .cmd-scan-btn {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            padding: 5px 14px;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .cmd-options {
+            display: flex;
+            gap: 0;
+        }
+        .cmd-opt {
+            flex: 1;
+            padding: 8px 16px;
+            font-size: 11px;
+            color: var(--text-3);
+            border-right: 1px solid var(--border2);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .cmd-opt:last-child { border-right: none; }
+        .cmd-opt select {
+            background: transparent;
+            border: none;
+            color: var(--text-2);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            outline: none;
+        }
+        .cmd-results {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .cmd-result-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border2);
+        }
+        .cmd-result-item:last-child { border-bottom: none; }
+        .cmd-result-item:hover { background: rgba(255,255,255,0.05); }
+        .cmd-result-pkg { font-size: 12.5px; color: var(--text); flex: 1; }
+        .cmd-result-sub { font-size: 11px; color: var(--text-3); margin-top: 1px; }
+        .cmd-result-verdict {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 3px;
+        }
+        .rv-reject  { background: rgba(241,76,76,0.15); color: var(--err); }
+        .rv-cond    { background: rgba(204,167,0,0.1);  color: #d7ba7d; }
+        .rv-approve { background: rgba(78,201,176,0.1); color: var(--pass); }
+    </style>
+</head>
+<body>
+
+    <!-- Title bar -->
+    <div class="title-bar">
+        <div class="title-bar-macos">
+            <div class="macos-dot" style="background:#ff5f57;"></div>
+            <div class="macos-dot" style="background:#ffbd2e;"></div>
+            <div class="macos-dot" style="background:#28c840;"></div>
+        </div>
+        <span>OSS Watchdog — oss-security-analyzer.sop.md</span>
+    </div>
+
+    <div class="app-frame">
+
+        <!-- Activity bar -->
+        <div class="activity-bar">
+            <div class="ab-icon active">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg>
+            </div>
+            <div class="ab-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            </div>
+            <div class="ab-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
+            </div>
+            <div class="ab-icon ab-bottom">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+            </div>
+        </div>
+
+        <!-- Explorer -->
+        <div class="explorer">
+            <div class="explorer-header">OSS Watchdog — Explorer</div>
+            <div class="tree-section">
+                <div class="tree-folder">
+                    <span style="color:var(--text-3);font-size:10px;">▼</span>
+                    <span>SCANS</span>
+                </div>
+                <div class="tree-folder" style="padding-left:24px;">
+                    <span style="color:var(--text-3);font-size:10px;">▼</span>
+                    <span style="font-size:11px;">2026-02-25</span>
+                </div>
+                <div class="tree-file error active">
+                    <span style="color:var(--err);font-size:10px;margin-right:-2px;">●</span>
+                    openclaw.report.md
+                </div>
+                <div class="tree-file modified">
+                    <span style="color:var(--warn);font-size:10px;margin-right:-2px;">●</span>
+                    pageindex.report.md
+                </div>
+                <div class="tree-folder" style="padding-left:24px;margin-top:4px;">
+                    <span style="color:var(--text-3);font-size:10px;">▶</span>
+                    <span style="font-size:11px;">2026-02-20</span>
+                </div>
+                <div class="tree-folder" style="padding-left:24px;">
+                    <span style="color:var(--text-3);font-size:10px;">▶</span>
+                    <span style="font-size:11px;">2026-02-18</span>
+                </div>
+
+                <div class="tree-folder" style="margin-top:8px;">
+                    <span style="color:var(--text-3);font-size:10px;">▼</span>
+                    <span>SOP</span>
+                </div>
+                <div class="tree-file">oss-security-analyzer.sop.md</div>
+                <div class="tree-file">checklist.yaml</div>
+            </div>
+        </div>
+
+        <!-- Editor + problems -->
+        <div class="editor-area">
+
+            <!-- Command palette (submit) -->
+            <div class="cmd-palette">
+                <div class="cmd-input-wrap">
+                    <span class="cmd-prefix">watchdog &gt;</span>
+                    <input class="cmd-field" type="text" placeholder="Scan github.com/owner/repo or package@version...">
+                    <button class="cmd-scan-btn" onclick="window.location.href='analyzing.html'">Scan</button>
+                </div>
+                <div class="cmd-options">
+                    <div class="cmd-opt">
+                        Ecosystem
+                        <select><option>auto</option><option>npm</option><option>pip</option><option>cargo</option></select>
+                    </div>
+                    <div class="cmd-opt">
+                        Depth
+                        <select><option>shallow</option><option>full</option></select>
+                    </div>
+                    <div class="cmd-opt" style="color:var(--text-3);font-size:10px;flex:2;">
+                        Repositories cloned to /tmp and removed after analysis
+                    </div>
+                </div>
+                <div class="cmd-results">
+                    <div style="padding:6px 16px 4px;font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em;">Recent Scans</div>
+                    <div class="cmd-result-item" onclick="window.location.href='report-openclaw.html'">
+                        <div>
+                            <div class="cmd-result-pkg">openclaw / openclaw</div>
+                            <div class="cmd-result-sub">node · pnpm · 2026-02-25 · commit 975c9f4</div>
+                        </div>
+                        <span class="cmd-result-verdict rv-reject">REJECT</span>
+                    </div>
+                    <div class="cmd-result-item" onclick="window.location.href='report-full.html'">
+                        <div>
+                            <div class="cmd-result-pkg">VectifyAI / PageIndex</div>
+                            <div class="cmd-result-sub">python · pip · 2026-02-25 · commit a061d53</div>
+                        </div>
+                        <span class="cmd-result-verdict rv-cond">CONDITIONS</span>
+                    </div>
+                    <div class="cmd-result-item">
+                        <div>
+                            <div class="cmd-result-pkg">facebook / react</div>
+                            <div class="cmd-result-sub">javascript · npm · 2026-02-20 · commit 3c9d818</div>
+                        </div>
+                        <span class="cmd-result-verdict rv-approve">APPROVE</span>
+                    </div>
+                    <div class="cmd-result-item">
+                        <div>
+                            <div class="cmd-result-pkg">axios / axios</div>
+                            <div class="cmd-result-sub">javascript · npm · 2026-02-18 · commit 6780b18</div>
+                        </div>
+                        <span class="cmd-result-verdict rv-approve">APPROVE</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab bar -->
+            <div class="tab-bar">
+                <div class="tab active">
+                    <span class="tab-dot" style="background:var(--err);"></span>
+                    openclaw.report.md
+                </div>
+                <div class="tab">
+                    <span class="tab-dot" style="background:var(--warn);"></span>
+                    pageindex.report.md
+                </div>
+                <div class="tab">
+                    oss-security-analyzer.sop.md
+                </div>
+            </div>
+
+            <!-- Editor content -->
+            <div class="editor-content">
+                <div class="line-numbers">
+                    <div>1</div><div>2</div><div>3</div><div>4</div>
+                    <div>5</div><div>6</div><div>7</div><div>8</div>
+                    <div>9</div><div>10</div><div>11</div><div>12</div>
+                    <div>13</div><div>14</div><div>15</div><div>16</div>
+                    <div>17</div><div>18</div><div>19</div><div>20</div>
+                    <div>21</div><div>22</div><div>23</div><div>24</div>
+                    <div>25</div><div>26</div><div>27</div><div>28</div>
+                    <div>29</div><div>30</div><div>31</div><div>32</div>
+                </div>
+
+                <div class="code-view">
+
+                    <!-- Header -->
+                    <div class="code-line"><span class="cmt"># Security Review: openclaw/openclaw</span></div>
+                    <div class="code-line"><span class="cmt">## Analysis date: 2026-02-25  ·  commit: 975c9f4  ·  SOP v1.4</span></div>
+                    <div class="code-line"></div>
+
+                    <!-- Overall risk -->
+                    <div class="code-line err-line">
+                        <span class="gutter g-err">✕</span>
+                        <span><span class="kw">OVERALL_RISK</span> <span class="op">=</span> <span class="str">"HIGH"</span></span>
+                        <span class="diag diag-err">REJECT — do not install on privileged host</span>
+                    </div>
+                    <div class="code-line err-line">
+                        <span class="gutter g-err">✕</span>
+                        <span><span class="kw">VERDICT</span>      <span class="op">=</span> <span class="str">"REJECT"</span></span>
+                    </div>
+                    <div class="code-line"></div>
+
+                    <!-- Network section -->
+                    <div class="code-line section-head"><span class="cmt">## [03] Network &amp; Communication — MEDIUM</span></div>
+                    <div class="code-line">
+                        <span class="gutter g-pass">✓</span>
+                        <span><span class="fn">ssrf_protection</span><span class="op">(</span><span class="var">src</span><span class="op">/</span><span class="var">infra</span><span class="op">/</span><span class="var">net</span><span class="op">/</span><span class="path">ssrf.ts</span><span class="op">)</span></span>
+                        <span class="diag diag-pass">private-IP blocking confirmed</span>
+                    </div>
+                    <div class="code-line">
+                        <span class="gutter g-warn">!</span>
+                        <span><span class="fn">external_endpoints</span><span class="op">:</span> <span class="num">6</span> <span class="cmt">  # api.openai.com, api.anthropic.com, graph.microsoft.com, ...</span></span>
+                        <span class="diag diag-warn">broad but explainable</span>
+                    </div>
+                    <div class="code-line">
+                        <span class="gutter"></span>
+                        <span class="cmt">  # WebSocket: wss:// enforced for remote, loopback ws:// allowed — src/gateway/client.ts:116</span>
+                    </div>
+                    <div class="code-line"></div>
+
+                    <!-- Code safety -->
+                    <div class="code-line section-head"><span class="cmt">## [06] Code Safety — HIGH</span></div>
+                    <div class="code-line err-line">
+                        <span class="gutter g-err">✕</span>
+                        <span><span class="kw">eval</span><span class="op">(</span><span class="fn">fn_body</span><span class="op">)</span>   <span class="cmt">  # src/browser/pw-tools-core.interactions.ts:287,294</span></span>
+                        <span class="diag diag-err">HIGH — dynamic eval of attacker-reachable input</span>
+                    </div>
+                    <div class="code-line err-line">
+                        <span class="gutter g-err">✕</span>
+                        <span><span class="kw">new</span> <span class="cls">Function</span><span class="op">(</span><span class="fn">fn_body</span><span class="op">)</span>  <span class="cmt"># :328, :334</span></span>
+                        <span class="diag diag-err">HIGH — same attack surface as eval()</span>
+                    </div>
+                    <div class="code-line err-line">
+                        <span class="gutter g-err">✕</span>
+                        <span><span class="fn">spawn</span><span class="op">(</span><span class="var">cmd</span><span class="op">)</span>  <span class="cmt">             # src/node-host/invoke.ts:122</span></span>
+                        <span class="diag diag-err">HIGH — shell execution, policy-gated</span>
+                    </div>
+                    <div class="code-line"></div>
+
+                    <!-- Supply chain -->
+                    <div class="code-line section-head"><span class="cmt">## [09] Supply Chain — HIGH</span></div>
+                    <div class="code-line err-line">
+                        <span class="gutter g-err">✕</span>
+                        <span><span class="fn">curl</span><span class="op">(...) |</span> <span class="fn">bash</span><span class="op">()</span>   <span class="cmt"># apps/macos/Sources/OpenClaw/CLIInstaller.swift:73</span></span>
+                        <span class="diag diag-err">HIGH — remote script exec at install time</span>
+                    </div>
+                    <div class="code-line warn-line">
+                        <span class="gutter g-warn">!</span>
+                        <span><span class="fn">prepare</span><span class="op">:</span> <span class="str">"git config ..."</span>  <span class="cmt"># package.json:106</span></span>
+                        <span class="diag diag-warn">modifies git hooks at install time</span>
+                    </div>
+                    <div class="code-line">
+                        <span class="gutter g-pass">✓</span>
+                        <span><span class="var">pnpm-lock.yaml</span><span class="op">:</span> <span class="cls">exists</span>  <span class="cmt"># security pins present in overrides</span></span>
+                    </div>
+                    <div class="code-line"></div>
+
+                    <!-- Permissions -->
+                    <div class="code-line section-head"><span class="cmt">## [10] Permissions — HIGH</span></div>
+                    <div class="code-line err-line">
+                        <span class="gutter g-err">✕</span>
+                        <span><span class="var">chrome_extension.permissions</span><span class="op">: [</span><span class="str">"debugger"</span><span class="op">,</span> <span class="str">"tabs"</span><span class="op">,</span> <span class="str">"activeTab"</span><span class="op">, ...]</span></span>
+                        <span class="diag diag-err">HIGH — debugger+tabs is near-total browser control</span>
+                    </div>
+                    <div class="code-line err-line">
+                        <span class="gutter g-err">✕</span>
+                        <span><span class="var">android.permissions</span><span class="op">: [</span><span class="str">"CAMERA"</span><span class="op">,</span> <span class="str">"RECORD_AUDIO"</span><span class="op">,</span> <span class="str">"LOCATION"</span><span class="op">,</span> <span class="str">"READ_SMS"</span><span class="op">, ...]</span></span>
+                        <span class="diag diag-err">HIGH — excessive mobile permission scope</span>
+                    </div>
+                    <div class="code-line"></div>
+
+                    <!-- Dependencies -->
+                    <div class="code-line section-head"><span class="cmt">## [08] Dependencies — MEDIUM</span></div>
+                    <div class="code-line pass-line">
+                        <span class="gutter g-pass">✓</span>
+                        <span><span class="fn">pnpm_audit</span><span class="op">(</span><span class="str">"--prod"</span><span class="op">):</span> <span class="num">0</span> <span class="cls">CVEs</span>  <span class="cmt"># 1177 prod transitive deps scanned</span></span>
+                        <span class="diag diag-pass">0 known vulnerabilities</span>
+                    </div>
+                    <div class="code-line warn-line">
+                        <span class="gutter g-warn">!</span>
+                        <span><span class="var">floating_ranges</span><span class="op">:</span> <span class="num">58</span> <span class="op">/</span> <span class="num">73</span>  <span class="cmt"># 15 exact pins; 58 use ^/~ ranges</span></span>
+                        <span class="diag diag-warn">non-deterministic transitive resolution</span>
+                    </div>
+                    <div class="code-line"></div>
+
+                    <!-- Verdict -->
+                    <div class="code-line section-head"><span class="cmt">## [14] Recommendation</span></div>
+                    <div class="code-line err-line">
+                        <span class="gutter g-err">✕</span>
+                        <span><span class="kw">return</span> <span class="str">"REJECT"</span>  <span class="cmt"># exec capabilities + curl|bash installer + broad permissions</span></span>
+                        <span class="diag diag-err">Do not install on privileged machine</span>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Problems panel -->
+            <div class="problems-panel">
+                <div class="panel-tabs">
+                    <div class="panel-tab active">
+                        Problems
+                        <span class="panel-count err">5</span>
+                        <span class="panel-count warn">3</span>
+                    </div>
+                    <div class="panel-tab">Terminal</div>
+                    <div class="panel-tab">Output</div>
+                    <div class="panel-tab">Run Log</div>
+                </div>
+                <div class="problems-list">
+                    <div class="problem-item">
+                        <span class="problem-sev g-err">✕</span>
+                        <span class="problem-msg"><strong>[HIGH]</strong> Dynamic eval() / new Function() on attacker-reachable input</span>
+                        <span class="problem-loc">pw-tools-core.interactions.ts:287</span>
+                    </div>
+                    <div class="problem-item">
+                        <span class="problem-sev g-err">✕</span>
+                        <span class="problem-msg"><strong>[HIGH]</strong> Remote installer uses curl | bash pattern</span>
+                        <span class="problem-loc">CLIInstaller.swift:73</span>
+                    </div>
+                    <div class="problem-item">
+                        <span class="problem-sev g-err">✕</span>
+                        <span class="problem-msg"><strong>[HIGH]</strong> Shell execution framework by design — spawn() with policy gate</span>
+                        <span class="problem-loc">invoke.ts:122</span>
+                    </div>
+                    <div class="problem-item">
+                        <span class="problem-sev g-err">✕</span>
+                        <span class="problem-msg"><strong>[HIGH]</strong> Chrome extension requests debugger + tabs permissions</span>
+                        <span class="problem-loc">manifest.json:12</span>
+                    </div>
+                    <div class="problem-item">
+                        <span class="problem-sev g-err">✕</span>
+                        <span class="problem-msg"><strong>[HIGH]</strong> Android manifest — camera, mic, location, SMS, install packages</span>
+                        <span class="problem-loc">AndroidManifest.xml:12</span>
+                    </div>
+                    <div class="problem-item">
+                        <span class="problem-sev g-warn">!</span>
+                        <span class="problem-msg"><strong>[MED]</strong> prepare script modifies git hooks at install time</span>
+                        <span class="problem-loc">package.json:106</span>
+                    </div>
+                    <div class="problem-item">
+                        <span class="problem-sev g-warn">!</span>
+                        <span class="problem-msg"><strong>[MED]</strong> 58/73 direct deps use floating ranges (^/~) — non-deterministic</span>
+                        <span class="problem-loc">pnpm-lock.yaml</span>
+                    </div>
+                    <div class="problem-item">
+                        <span class="problem-sev g-warn">!</span>
+                        <span class="problem-msg"><strong>[MED]</strong> OTel plugin can export traces/metrics externally when enabled</span>
+                        <span class="problem-loc">diagnostics-otel/service.ts:74</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Status bar -->
+    <div class="status-bar">
+        <div class="status-item">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
+            OSS Watchdog
+        </div>
+        <div class="status-item">SOP v1.4</div>
+        <div class="status-item" style="color:#ffaaaa;">✕ 5 errors</div>
+        <div class="status-item" style="color:#ffdd88;">! 3 warnings</div>
+        <div class="right">
+            <div class="status-item">openclaw.report.md</div>
+            <div class="status-item">Zero-trust</div>
+            <div class="status-item">Markdown</div>
+            <div class="status-item">Ln 31, Col 1</div>
+        </div>
+    </div>
+
+</body>
+</html>

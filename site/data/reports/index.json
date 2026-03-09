@@ -1,38 +1,115 @@
 {
-    "reports": [
-        {
-            "id": "openclaw-openclaw-975c9f4",
-            "owner": "openclaw",
-            "repo": "openclaw",
-            "commit": "975c9f4",
-            "analyzed": "2026-02-25",
-            "ecosystem": "Node · pnpm",
-            "risk": "high",
-            "verdict": "reject",
-            "keyFinding": "eval() + curl|bash install path"
-        },
-        {
-            "id": "facebook-react-3c9d818",
-            "owner": "facebook",
-            "repo": "react",
-            "commit": "3c9d818",
-            "analyzed": "2026-02-22",
-            "ecosystem": "JS · npm",
-            "risk": "low",
-            "verdict": "approve",
-            "keyFinding": "No deceptive patterns found"
-        },
-        {
-            "id": "lodash-lodash-af44d97",
-            "owner": "lodash",
-            "repo": "lodash",
-            "commit": "af44d97",
-            "analyzed": "2026-02-21",
-            "ecosystem": "JS · npm",
-            "risk": "medium",
-            "verdict": "conditional",
-            "keyFinding": "2 transitive dep vulnerabilities"
-        }
-    ],
-    "lastUpdated": "2026-02-25T00:00:00Z"
+  "reports": [
+    {
+      "id": "tj-commander.js-4104a5dc",
+      "owner": "tj",
+      "repo": "commander.js",
+      "commit": "8247364da749736570161e95682b07fc2d72497b",
+      "analyzed": "2026-03-08",
+      "ecosystem": "Node.js/NPM",
+      "risk": "low",
+      "verdict": "approve",
+      "keyFinding": "Zero runtime dependencies and safe subprocess execution make this a low-risk, well-maintained CLI framework"
+    },
+    {
+      "id": "tj-commander.js-646df667",
+      "owner": "tj",
+      "repo": "commander.js",
+      "commit": "unknown",
+      "analyzed": "2026-03-08",
+      "ecosystem": ": Node.js/NPM",
+      "risk": "medium",
+      "verdict": "conditional",
+      "keyFinding": "The commander package is a legitimate, well-maintained Node.js CLI argument parsing library with excellent security characteristics. The codebase shows no malicious patterns, has zero production depen"
+    },
+    {
+      "id": "sindresorhus-ora-abc99999",
+      "owner": "sindresorhus",
+      "repo": "ora",
+      "commit": "7cf29a75e64409205a6606dada9780ccf5acf6a8",
+      "analyzed": "2026-03-08",
+      "ecosystem": "JS/npm",
+      "risk": "low",
+      "verdict": "approve",
+      "keyFinding": "Well-maintained, popular terminal spinner library with clean security profile and no concerning behavior"
+    },
+    {
+      "id": "debug-js-debug-test5678",
+      "owner": "debug-js",
+      "repo": "debug",
+      "commit": "6704cea64eb6943f74fc82159401731acb170b3c",
+      "analyzed": "2026-03-08",
+      "ecosystem": "JS/npm",
+      "risk": "low",
+      "verdict": "approve",
+      "keyFinding": "Clean debugging utility with no security risks, only minor documentation gaps"
+    },
+    {
+      "id": "chalk-chalk-test1234",
+      "owner": "chalk",
+      "repo": "chalk",
+      "commit": "aa06bb5ac3f14df9fda8cfb54274dfc165ddfdef",
+      "analyzed": "2026-03-08",
+      "ecosystem": "JS/npm",
+      "risk": "low",
+      "verdict": "approve",
+      "keyFinding": "Clean terminal styling library with zero production dependencies and no security risks"
+    },
+    {
+      "id": "sindresorhus-is-odd-a1b2c3d4",
+      "owner": "sindresorhus",
+      "repo": "is-odd",
+      "commit": "N/A - repository not found",
+      "analyzed": "2026-03-08",
+      "ecosystem": "unknown",
+      "risk": "high",
+      "verdict": "reject",
+      "keyFinding": "Repository does not exist - potential supply chain attack vector or misconfiguration"
+    },
+    {
+      "id": "expressjs-express-7f3a9b12",
+      "owner": "expressjs",
+      "repo": "express",
+      "commit": "6c4249feec8ab40631817c8e7001baf2ed022224",
+      "analyzed": "2026-03-08",
+      "ecosystem": "node",
+      "risk": "low",
+      "verdict": "approve",
+      "keyFinding": "Express.js is a legitimate, well-established web framework with excellent community trust signals, with only dev dependency vulnerabilities requiring attention"
+    },
+    {
+      "id": "openclaw-openclaw-975c9f4",
+      "owner": "openclaw",
+      "repo": "openclaw",
+      "commit": "975c9f4",
+      "analyzed": "2026-02-25",
+      "ecosystem": "Node \u00b7 pnpm",
+      "risk": "high",
+      "verdict": "reject",
+      "keyFinding": "eval() + curl|bash install path"
+    },
+    {
+      "id": "facebook-react-3c9d818",
+      "owner": "facebook",
+      "repo": "react",
+      "commit": "3c9d818",
+      "analyzed": "2026-02-22",
+      "ecosystem": "JS \u00b7 npm",
+      "risk": "low",
+      "verdict": "approve",
+      "keyFinding": "No deceptive patterns found"
+    },
+    {
+      "id": "lodash-lodash-af44d97",
+      "owner": "lodash",
+      "repo": "lodash",
+      "commit": "af44d97",
+      "analyzed": "2026-02-21",
+      "ecosystem": "JS \u00b7 npm",
+      "risk": "medium",
+      "verdict": "conditional",
+      "keyFinding": "2 transitive dep vulnerabilities"
+    }
+  ],
+  "lastUpdated": "2026-03-08T03:16:27Z"
 }

@@ -1,0 +1,309 @@
+{
+  "id": "chalk-chalk-test1234",
+  "url": "https://github.com/chalk/chalk",
+  "owner": "chalk",
+  "repo": "chalk",
+  "analyzed": "2026-03-08",
+  "sopVersion": "1.4",
+  "verdict": "approve",
+  "risk": "low",
+  "keyFinding": "Clean terminal styling library with zero production dependencies and no security risks",
+  "commit": "aa06bb5ac3f14df9fda8cfb54274dfc165ddfdef",
+  "ecosystems": [
+    "JS/npm"
+  ],
+  "primaryEcosystem": "JS/npm",
+  "summary": [
+    {
+      "category": "Network & Communication",
+      "risk": "low",
+      "finding": "No network requests or external endpoints found"
+    },
+    {
+      "category": "Telemetry & Analytics",
+      "risk": "low",
+      "finding": "No analytics or telemetry code detected"
+    },
+    {
+      "category": "Data Collection & Privacy",
+      "risk": "low",
+      "finding": "No data collection, fingerprinting, or privacy concerns"
+    },
+    {
+      "category": "Code Safety",
+      "risk": "low",
+      "finding": "No dynamic code execution, eval, or unsafe patterns"
+    },
+    {
+      "category": "Binary Files",
+      "risk": "low",
+      "finding": "No binary executables or native addons found"
+    },
+    {
+      "category": "Dependencies",
+      "risk": "low",
+      "finding": "Zero production dependencies - excellent security posture"
+    },
+    {
+      "category": "Supply Chain",
+      "risk": "low",
+      "finding": "No risky lifecycle scripts or install-time behavior"
+    },
+    {
+      "category": "Permissions",
+      "risk": "low",
+      "finding": "No excessive permissions or manifest files"
+    },
+    {
+      "category": "Build & Install",
+      "risk": "low",
+      "finding": "No build scripts or install-time downloads"
+    },
+    {
+      "category": "Repository Trust",
+      "risk": "low",
+      "finding": "Has security policy and standard repository structure"
+    },
+    {
+      "category": "Documentation Verification",
+      "risk": "low",
+      "finding": "Code matches documentation claims for terminal styling"
+    },
+    {
+      "category": "Adversarial Deception",
+      "risk": "low",
+      "finding": "No prompt injection or deceptive patterns detected"
+    }
+  ],
+  "findings": [
+    {
+      "section": "Network & Communication",
+      "sectionNumber": "01",
+      "sectionRisk": "low",
+      "items": [
+        {
+          "severity": "low",
+          "title": "URLs in documentation only",
+          "description": "Found URLs only in documentation, package.json, and README files. No network request code.",
+          "evidence": [
+            {
+              "file": "package.json:7",
+              "note": "GitHub funding URL"
+            },
+            {
+              "file": "readme.md:multiple",
+              "note": "Documentation links to GitHub and npm"
+            }
+          ]
+        }
+      ],
+      "checks": [
+        {
+          "status": "ok",
+          "text": "No network request functions found"
+        },
+        {
+          "status": "ok",
+          "text": "No external API calls detected"
+        }
+      ]
+    },
+    {
+      "section": "Dependencies",
+      "sectionNumber": "06",
+      "sectionRisk": "low",
+      "items": [
+        {
+          "severity": "low",
+          "title": "Zero production dependencies",
+          "description": "Package has no runtime dependencies, using only vendored code. DevDependency vulnerabilities do not affect runtime security.",
+          "evidence": [
+            {
+              "file": "package.json",
+              "note": "No dependencies field"
+            },
+            {
+              "file": "npm ls output",
+              "note": "Confirmed zero production deps"
+            }
+          ]
+        },
+        {
+          "severity": "medium",
+          "title": "DevDependency vulnerabilities",
+          "description": "14 vulnerabilities found in devDependencies (1 critical, 7 high, 6 moderate) but these do not affect runtime.",
+          "evidence": [
+            {
+              "file": "npm audit",
+              "note": "All vulnerabilities in dev tools like ava, xo, matcha"
+            }
+          ]
+        }
+      ],
+      "checks": [
+        {
+          "status": "ok",
+          "text": "Zero production dependencies"
+        },
+        {
+          "status": "warn",
+          "text": "DevDependencies have vulnerabilities but don't affect runtime"
+        }
+      ]
+    },
+    {
+      "section": "Code Safety",
+      "sectionNumber": "04",
+      "sectionRisk": "low",
+      "items": [
+        {
+          "severity": "low",
+          "title": "Clean terminal styling implementation",
+          "description": "Source code is clean and focused on ANSI escape code generation for terminal styling.",
+          "evidence": [
+            {
+              "file": "source/index.js",
+              "note": "Well-structured styling functions"
+            },
+            {
+              "file": "source/utilities.js",
+              "note": "Basic string manipulation utilities"
+            }
+          ]
+        }
+      ],
+      "checks": [
+        {
+          "status": "ok",
+          "text": "No eval or dynamic code execution"
+        },
+        {
+          "status": "ok",
+          "text": "No shell access or child process spawning"
+        },
+        {
+          "status": "ok",
+          "text": "No obfuscated code patterns"
+        }
+      ]
+    }
+  ],
+  "redFlags": [
+    {
+      "check": "Obfuscated code without reason",
+      "status": "pass",
+      "notes": "Code is clean and readable"
+    },
+    {
+      "check": "Unexplained network calls to unknown domains",
+      "status": "pass",
+      "notes": "No network calls found"
+    },
+    {
+      "check": "Committed binaries without source",
+      "status": "pass",
+      "notes": "No binary files found"
+    },
+    {
+      "check": "Excessive permissions without justification",
+      "status": "pass",
+      "notes": "No permission requests"
+    },
+    {
+      "check": "Install scripts changing security settings",
+      "status": "pass",
+      "notes": "No install scripts"
+    },
+    {
+      "check": "Undisclosed telemetry / data collection",
+      "status": "pass",
+      "notes": "No telemetry found"
+    },
+    {
+      "check": "Cryptocurrency mining code",
+      "status": "pass",
+      "notes": "No mining code detected"
+    },
+    {
+      "check": "Known malware signatures / patterns",
+      "status": "pass",
+      "notes": "No malicious patterns found"
+    }
+  ],
+  "remediation": [
+    "No remediation required - package is safe for production use",
+    "Consider updating devDependencies to fix development-time vulnerabilities if contributing to the project"
+  ],
+  "sidebar": {
+    "community": {
+      "stars": "Unknown (depth-1 clone)",
+      "forks": "Unknown (depth-1 clone)",
+      "contributors": "1+ (limited by clone depth)"
+    },
+    "trust": {
+      "securityMd": true,
+      "branchProtection": "Unknown",
+      "commitSigning": "Unknown",
+      "openIssues": "Unknown",
+      "created": "Unknown"
+    },
+    "dependencies": {
+      "cves": 14,
+      "scanner": "npm audit",
+      "prodTransitive": 0,
+      "directDeps": "Zero production dependencies",
+      "exactPins": "N/A",
+      "floatingRanges": "N/A"
+    },
+    "checklist": [
+      {
+        "name": "Network & Communication",
+        "status": "pass"
+      },
+      {
+        "name": "Telemetry & Analytics",
+        "status": "pass"
+      },
+      {
+        "name": "Data Collection & Privacy",
+        "status": "pass"
+      },
+      {
+        "name": "Code Safety",
+        "status": "pass"
+      },
+      {
+        "name": "Binary Files",
+        "status": "pass"
+      },
+      {
+        "name": "Dependency Audit",
+        "status": "warn"
+      },
+      {
+        "name": "Supply Chain",
+        "status": "pass"
+      },
+      {
+        "name": "Permissions",
+        "status": "pass"
+      },
+      {
+        "name": "Build & Install",
+        "status": "pass"
+      },
+      {
+        "name": "Repository Trust",
+        "status": "pass"
+      },
+      {
+        "name": "Claim Verification",
+        "status": "pass"
+      },
+      {
+        "name": "Adversarial Deception",
+        "status": "pass"
+      }
+    ]
+  }
+}
