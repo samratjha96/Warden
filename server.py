@@ -11,15 +11,20 @@ Serves static files from ./site and handles POST /api/submit
 
 import json
 import os
-import re
 import hashlib
 import sys
+import tempfile
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from http.server import HTTPServer, SimpleHTTPRequestHandler
+import fcntl
+
+from repo_url import parse_repo_url
 
 PORT = int(os.environ.get("PORT", 8080))
 SITE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site")
 QUEUE_FILE = os.path.join(SITE_DIR, "data", "queue", "jobs.json")
+QUEUE_LOCK_FILE = QUEUE_FILE + ".lock"
 
 
 def now():
@@ -36,8 +41,23 @@ def load_queue():
 
 def save_queue(q):
     os.makedirs(os.path.dirname(QUEUE_FILE), exist_ok=True)
-    with open(QUEUE_FILE, "w") as f:
+    fd, tmp_path = tempfile.mkstemp(
+        prefix="jobs-", suffix=".json.tmp", dir=os.path.dirname(QUEUE_FILE)
+    )
+    with os.fdopen(fd, "w") as f:
         json.dump(q, f, indent=2)
+    os.replace(tmp_path, QUEUE_FILE)
+
+
+@contextmanager
+def queue_lock():
+    os.makedirs(os.path.dirname(QUEUE_LOCK_FILE), exist_ok=True)
+    with open(QUEUE_LOCK_FILE, "w") as lock_file:
+        fcntl.flock(lock_file, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(lock_file, fcntl.LOCK_UN)
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -65,20 +85,21 @@ class Handler(SimpleHTTPRequestHandler):
         except Exception:
             return self.respond(400, {"error": "Invalid JSON"})
 
-        url = body.get("url", "").strip()
-        if not url.startswith("http"):
-            url = "https://" + url
-
-        m = re.search(r"(?:github|gitlab)\.com/([^/]+)/([^/?\#]+)", url, re.I)
-        if not m:
+        try:
+            parsed = parse_repo_url(body.get("url", ""))
+        except ValueError:
             return self.respond(400, {"error": "Invalid repo URL"})
 
-        owner, repo = m.group(1), m.group(2).rstrip(".git")
+        url = parsed["url"]
+        owner = parsed["owner"]
+        repo = parsed["repo"]
+        provider = parsed["provider"]
         job_id = f"{owner}-{repo}-{hashlib.sha256(f'{owner}{repo}{now()}'.encode()).hexdigest()[:8]}"
 
         job = {
             "id": job_id,
             "url": url,
+            "provider": provider,
             "owner": owner,
             "repo": repo,
             "status": "pending",
@@ -90,10 +111,11 @@ class Handler(SimpleHTTPRequestHandler):
             },
         }
 
-        q = load_queue()
-        q["jobs"].insert(0, job)
-        q["lastUpdated"] = now()
-        save_queue(q)
+        with queue_lock():
+            q = load_queue()
+            q["jobs"].insert(0, job)
+            q["lastUpdated"] = now()
+            save_queue(q)
 
         print(f"[+] Queued: {owner}/{repo} ({job_id})")
         self.respond(201, {"job": job})

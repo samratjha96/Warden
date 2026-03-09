@@ -15,5 +15,41 @@
   "findings": "[\n  {\n    \"section\": \"Repository Availability\",\n    \"sectionNumber\": \"01\", \n    \"sectionRisk\": \"high\",\n    \"items\": [\n      {\n        \"severity\": \"high\",\n        \"title\": \"Repository Not Found\",\n        \"description\": \"The specified repository https://github.com/sindresorhus/is-odd returns a 404 Not Found error. This could indicate: 1) Typosquatting attempt where malicious actors register similar names, 2) Repository was deleted or moved, 3) Configuration error in deployment scripts, 4) Potential supply chain attack vector.\",\n        \"evidence\": [\n          { \"file\": \"API Response\", \"note\": \"GitHub API returned 404 Not Found for sindresorhus/is-odd\" },\n          { \"file\": \"Git Clone\", \"note\": \"git clone failed with 'repository not found'\" }\n        ]\n      }\n    ],\n    \"checks\": [\n      { \"status\": \"bad\", \"text\": \"Repository exists at specified URL\" },\n      { \"status\": \"bad\", \"text\": \"Repository is publicly accessible\" },\n      { \"status\": \"bad\", \"text\": \"Repository owner exists (sindresorhus exists but repo does not)\" }\n    ]\n  },\n  {\n    \"section\": \"Supply Chain Risk Assessment\", \n    \"sectionNumber\": \"02\",\n    \"sectionRisk\": \"high\",\n    \"items\": [\n      {\n        \"severity\": \"high\", \n        \"title\": \"Potential Supply Chain Attack Vector\",\n        \"description\": \"Non-existent repositories in dependency chains can be exploited by attackers who register the missing repository name with malicious code. This is a known attack vector called 'dependency confusion' or 'namespace squatting'.\",\n        \"evidence\": [\n          { \"file\": \"Repository Status\", \"note\": \"sindresorhus/is-odd does not exist but could be registered by attackers\" }\n        ]\n      }\n    ],\n    \"checks\": [\n      { \"status\": \"bad\", \"text\": \"Repository exists to prevent namespace squatting\" },\n      { \"status\": \"bad\", \"text\": \"Dependency chain integrity verified\" }\n    ]\n  }\n]",
   "redFlags": "[\n  {\n    \"check\": \"Repository exists and is accessible\",\n    \"status\": \"fail\",\n    \"notes\": \"Repository does not exist at specified URL - critical supply chain risk\"\n  },\n  {\n    \"check\": \"Obfuscated code without reason\", \n    \"status\": \"pass\",\n    \"notes\": \"Cannot evaluate - repository inaccessible\"\n  },\n  {\n    \"check\": \"Unexplained network calls to unknown domains\",\n    \"status\": \"pass\", \n    \"notes\": \"Cannot evaluate - repository inaccessible\"\n  },\n  {\n    \"check\": \"Committed binaries without source\",\n    \"status\": \"pass\",\n    \"notes\": \"Cannot evaluate - repository inaccessible\" \n  },\n  {\n    \"check\": \"Excessive permissions without justification\",\n    \"status\": \"pass\",\n    \"notes\": \"Cannot evaluate - repository inaccessible\"\n  },\n  {\n    \"check\": \"Install scripts changing security settings\",\n    \"status\": \"pass\", \n    \"notes\": \"Cannot evaluate - repository inaccessible\"\n  },\n  {\n    \"check\": \"Undisclosed telemetry / data collection\",\n    \"status\": \"pass\",\n    \"notes\": \"Cannot evaluate - repository inaccessible\"\n  },\n  {\n    \"check\": \"Cryptocurrency mining code\",\n    \"status\": \"pass\",\n    \"notes\": \"Cannot evaluate - repository inaccessible\"\n  }\n]",
   "remediation": "[\n  \"Verify the correct repository URL and check for typos in the repository name\",\n  \"Check if the repository was moved, renamed, or deleted by contacting the maintainer\",\n  \"Implement dependency pinning to prevent attackers from registering the missing repository\",\n  \"Use private package registries or mirrors to avoid dependency confusion attacks\", \n  \"Review all dependency specifications for similar non-existent repositories\",\n  \"Implement automated checks to verify repository existence before deployment\",\n  \"Consider using package-lock files or equivalent to freeze dependency resolution\",\n  \"Monitor for new registrations of this repository name by potential attackers\"\n]",
-  "sidebar": "{\n  \"community\": {\n    \"stars\": \"N/A\",\n    \"forks\": \"N/A\", \n    \"contributors\": \"N/A\"\n  },\n  \"trust\": {\n    \"securityMd\": false,\n    \"branchProtection\": false,\n    \"commitSigning\": \"none\",\n    \"openIssues\": 0,\n    \"created\": \"N/A\"\n  },\n  \"dependencies\": {\n    \"cves\": 0,\n    \"scanner\": \"none\", \n    \"prodTransitive\": 0,\n    \"directDeps\": \"Cannot analyze - repository does not exist\",\n    \"exactPins\": \"N/A\",\n    \"floatingRanges\": \"N/A\"\n  },\n  \"checklist\": [\n    { \"name\": \"Network & Communication\", \"status\": \"fail\" },\n    { \"name\": \"Telemetry & Analytics\", \"status\": \"fail\" },\n    { \"name\": \"Data Collection & Privacy\", \"status\": \"fail\" },\n    { \"name\": \"Code Safety\", \"status\": \"fail\" },\n    { \"name\": \"Binary Files\", \"status\": \"fail\" },\n    { \"name\": \"Dependency Audit\", \"status\": \"fail\" },\n    { \"name\": \"Supply Chain\", \"status\": \"fail\" },\n    { \"name\": \"Permissions\", \"status\": \"fail\" },\n    { \"name\": \"Build & Install\", \"status\": \"fail\" },\n    { \"name\": \"Repository Trust\", \"status\": \"fail\" },\n    { \"name\": \"Claim Verification\", \"status\": \"fail\" }, \n    { \"name\": \"Adversarial Deception\", \"status\": \"fail\" }\n  ]\n}"
+  "sidebar": "{\n  \"community\": {\n    \"stars\": \"N/A\",\n    \"forks\": \"N/A\", \n    \"contributors\": \"N/A\"\n  },\n  \"trust\": {\n    \"securityMd\": false,\n    \"branchProtection\": false,\n    \"commitSigning\": \"none\",\n    \"openIssues\": 0,\n    \"created\": \"N/A\"\n  },\n  \"dependencies\": {\n    \"cves\": 0,\n    \"scanner\": \"none\", \n    \"prodTransitive\": 0,\n    \"directDeps\": \"Cannot analyze - repository does not exist\",\n    \"exactPins\": \"N/A\",\n    \"floatingRanges\": \"N/A\"\n  },\n  \"checklist\": [\n    { \"name\": \"Network & Communication\", \"status\": \"fail\" },\n    { \"name\": \"Telemetry & Analytics\", \"status\": \"fail\" },\n    { \"name\": \"Data Collection & Privacy\", \"status\": \"fail\" },\n    { \"name\": \"Code Safety\", \"status\": \"fail\" },\n    { \"name\": \"Binary Files\", \"status\": \"fail\" },\n    { \"name\": \"Dependency Audit\", \"status\": \"fail\" },\n    { \"name\": \"Supply Chain\", \"status\": \"fail\" },\n    { \"name\": \"Permissions\", \"status\": \"fail\" },\n    { \"name\": \"Build & Install\", \"status\": \"fail\" },\n    { \"name\": \"Repository Trust\", \"status\": \"fail\" },\n    { \"name\": \"Claim Verification\", \"status\": \"fail\" }, \n    { \"name\": \"Adversarial Deception\", \"status\": \"fail\" }\n  ]\n}",
+  "format": "markdown",
+  "ecosystem": "unknown",
+  "stats": {
+    "stars": "0",
+    "forks": "0",
+    "contributors": "0",
+    "openIssues": 0,
+    "created": "unknown",
+    "license": "unknown",
+    "hasSecurityMd": false
+  },
+  "approvalConditions": [
+    "Verify the repository URL and owner before approving any install.",
+    "Block dependency resolution for this package until provenance is confirmed."
+  ],
+  "scores": {
+    "overall": 0
+  },
+  "badges": [
+    {
+      "group": "risk",
+      "label": "Risk",
+      "value": "HIGH"
+    },
+    {
+      "group": "verdict",
+      "label": "Verdict",
+      "value": "REJECT"
+    },
+    {
+      "group": "ecosystem",
+      "label": "Ecosystem",
+      "value": "unknown"
+    }
+  ],
+  "content": "# Security Analysis: sindresorhus/is-odd\n\n**Commit**: `N/A - repository not found`\n**Analyzed**: 2026-03-08\n**Ecosystem**: unknown\n\n## Executive Summary\n\nRepository does not exist at the submitted URL. This is a supply-chain risk signal and analysis cannot proceed on code evidence.\n\n**Verdict**: REJECT\n**Risk Level**: HIGH\n\n## Detailed Findings\n\n- Git clone failed due to repository not found.\n- Provider metadata endpoints did not return project data.\n\n## Recommendation\n\n- Confirm package/repository provenance with maintainers.\n- Treat this as blocked for privileged environments until resolved.\n"
 }
