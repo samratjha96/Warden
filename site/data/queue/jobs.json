@@ -1,6 +1,20 @@
 {
   "jobs": [
     {
+      "id": "expressjs-body-parser-df6333bb",
+      "url": "https://github.com/expressjs/body-parser",
+      "provider": "github",
+      "owner": "expressjs",
+      "repo": "body-parser",
+      "status": "processing",
+      "submitted": "2026-03-09T07:03:25Z",
+      "options": {
+        "ecosystem": "auto",
+        "severity": "low",
+        "depth": "shallow"
+      }
+    },
+    {
       "id": "octocat-Spoon-Knife-920a587a",
       "url": "https://github.com/octocat/Spoon-Knife",
       "provider": "github",
@@ -43,5 +57,5 @@
       }
     }
   ],
-  "lastUpdated": "2026-03-09T06:53:37Z"
+  "lastUpdated": "2026-03-09T07:03:28Z"
 }

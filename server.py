@@ -18,13 +18,16 @@ import tempfile
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from http.server import HTTPServer, SimpleHTTPRequestHandler
+from pathlib import Path
 import fcntl
 
 from queue_ops import enqueue_job, remove_job
 from repo_url import parse_repo_url
+from worker_trigger import trigger_worker_for_job
 
 PORT = int(os.environ.get("PORT", 8080))
-SITE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site")
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+SITE_DIR = os.path.join(ROOT_DIR, "site")
 QUEUE_FILE = os.path.join(SITE_DIR, "data", "queue", "jobs.json")
 QUEUE_LOCK_FILE = QUEUE_FILE + ".lock"
 
@@ -132,7 +135,20 @@ class Handler(SimpleHTTPRequestHandler):
             save_queue(q)
 
         print(f"[+] Queued: {owner}/{repo} ({job_id})")
-        self.respond(201, {"job": job})
+        triggered, worker_error = trigger_worker_for_job(
+            root_dir=Path(ROOT_DIR),
+            job_id=job_id,
+        )
+        if not triggered:
+            print(f"[!] Failed to auto-trigger worker for {job_id}: {worker_error}")
+        self.respond(
+            201,
+            {
+                "job": job,
+                "autoWorkerTriggered": triggered,
+                "workerError": worker_error,
+            },
+        )
 
     def do_DELETE(self):
         m = re.fullmatch(r"/api/queue/([a-zA-Z0-9_.-]+)", self.path)
