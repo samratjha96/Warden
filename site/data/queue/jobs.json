@@ -1,4 +1,61 @@
 {
-  "jobs": [],
-  "lastUpdated": "2026-03-08T03:16:27Z"
+  "jobs": [
+    {
+      "id": "openclaw-openclaw-d6b829b8",
+      "url": "https://github.com/openclaw/openclaw",
+      "provider": "github",
+      "owner": "openclaw",
+      "repo": "openclaw",
+      "status": "pending",
+      "submitted": "2026-03-09T06:11:24Z",
+      "options": {
+        "ecosystem": "auto",
+        "severity": "low",
+        "depth": "shallow"
+      }
+    },
+    {
+      "id": "chalk-chalk-d2024147",
+      "url": "https://github.com/chalk/chalk",
+      "provider": "github",
+      "owner": "chalk",
+      "repo": "chalk",
+      "status": "pending",
+      "submitted": "2026-03-09T05:54:24Z",
+      "options": {
+        "ecosystem": "auto",
+        "severity": "low",
+        "depth": "shallow"
+      }
+    },
+    {
+      "id": "openclaw-openclaw-c0e47c95",
+      "url": "https://github.com/openclaw/openclaw",
+      "provider": "github",
+      "owner": "openclaw",
+      "repo": "openclaw",
+      "status": "pending",
+      "submitted": "2026-03-09T05:54:11Z",
+      "options": {
+        "ecosystem": "auto",
+        "severity": "low",
+        "depth": "shallow"
+      }
+    },
+    {
+      "id": "openclaw-openclaw-d698d63a",
+      "url": "https://github.com/openclaw/openclaw",
+      "provider": "github",
+      "owner": "openclaw",
+      "repo": "openclaw",
+      "status": "pending",
+      "submitted": "2026-03-09T05:53:56Z",
+      "options": {
+        "ecosystem": "auto",
+        "severity": "low",
+        "depth": "shallow"
+      }
+    }
+  ],
+  "lastUpdated": "2026-03-09T06:11:24Z"
 }
