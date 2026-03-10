@@ -21,7 +21,7 @@ code { font-family: 'Space Mono', monospace; font-size: 0.85em; background: #ebe
 /* ── Masthead ── */
 .masthead {
     border-bottom: 4px solid var(--ink);
-    padding: 0 40px;
+    padding: 0 56px;
 }
 .masthead-top {
     display: flex;
@@ -63,7 +63,7 @@ code { font-family: 'Space Mono', monospace; font-size: 0.85em; background: #ebe
 }
 .masthead-title h1 {
     font-family: 'Space Mono', monospace;
-    font-size: 48px;
+    font-size: 58px;
     font-weight: 700;
     letter-spacing: -0.03em;
     line-height: 1;
@@ -72,21 +72,21 @@ code { font-family: 'Space Mono', monospace; font-size: 0.85em; background: #ebe
 .masthead-home-link { display: inline-block; }
 .masthead-home-link:hover h1 { text-decoration: underline; }
 .masthead-title .tagline {
-    font-size: 11px;
+    font-size: 12px;
     font-family: 'Space Mono', monospace;
     color: var(--mid);
-    letter-spacing: 0.15em;
+    letter-spacing: 0.17em;
     text-transform: uppercase;
-    margin-top: 6px;
+    margin-top: 8px;
 }
 
 /* ── Layout ── */
 .page-wrap {
-    max-width: 1000px;
+    max-width: 1280px;
     margin: 0 auto;
-    padding: 0 40px 80px;
+    padding: 0 56px 88px;
 }
-.page-wrap--narrow { max-width: 900px; }
+.page-wrap--narrow { max-width: 1120px; }
 
 /* ── Breadcrumb ── */
 .breadcrumb-bar {
@@ -139,9 +139,9 @@ code { font-family: 'Space Mono', monospace; font-size: 0.85em; background: #ebe
 }
 .submit-url input {
     flex: 1;
-    padding: 12px 14px;
+    padding: 14px 16px;
     font-family: 'Space Mono', monospace;
-    font-size: 12px;
+    font-size: 14px;
     background: transparent;
     border: none;
     outline: none;
@@ -152,11 +152,11 @@ code { font-family: 'Space Mono', monospace; font-size: 0.85em; background: #ebe
     background: var(--ink);
     color: var(--paper);
     font-family: 'Space Mono', monospace;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    padding: 0 20px;
+    padding: 0 24px;
     border: none;
     cursor: pointer;
 }
@@ -167,12 +167,12 @@ code { font-family: 'Space Mono', monospace; font-size: 0.85em; background: #ebe
 .submit-options { display: flex; gap: 0; }
 .submit-option {
     flex: 1;
-    padding: 10px 14px;
+    padding: 12px 16px;
     border-right: 1px solid var(--ink);
 }
 .submit-option:last-child { border-right: none; }
 .submit-option label {
-    font-size: 10px;
+    font-size: 11px;
     font-family: 'Space Mono', monospace;
     color: var(--mid);
     text-transform: uppercase;
@@ -182,7 +182,7 @@ code { font-family: 'Space Mono', monospace; font-size: 0.85em; background: #ebe
 }
 .submit-option select {
     font-family: 'Space Mono', monospace;
-    font-size: 11px;
+    font-size: 13px;
     background: transparent;
     border: none;
     outline: none;
@@ -221,9 +221,9 @@ code { font-family: 'Space Mono', monospace; font-size: 0.85em; background: #ebe
     display: flex;
     gap: 14px;
     align-items: baseline;
-    padding: 8px 0;
+    padding: 10px 0;
     border-bottom: none;
-    font-size: 13px;
+    font-size: 15px;
 }
 .principle:last-child { border-bottom: none; }
 .principle-num {
@@ -323,7 +323,7 @@ code { font-family: 'Space Mono', monospace; font-size: 0.85em; background: #ebe
 .scan-table thead tr { border-bottom: 2px solid var(--ink); }
 .scan-table th {
     font-family: 'Space Mono', monospace;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.12em;
@@ -337,7 +337,7 @@ code { font-family: 'Space Mono', monospace; font-size: 0.85em; background: #ebe
     padding: 14px 16px 14px 0;
     border-bottom: 1px solid var(--rule);
     vertical-align: top;
-    font-size: 14px;
+    font-size: 15px;
     overflow: hidden;
 }
 .scan-table tbody tr:last-child td { border-bottom: none; }
@@ -345,11 +345,11 @@ code { font-family: 'Space Mono', monospace; font-size: 0.85em; background: #ebe
 .scan-table tbody tr:hover td { background: rgba(0,0,0,0.02); }
 .scan-table tbody tr:hover .scan-pkg { text-decoration: underline; }
 
-.scan-pkg { font-weight: 600; font-size: 14px; }
-.scan-sub { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--mid); margin-top: 3px; }
-.scan-eco { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--mid); white-space: nowrap; }
-.scan-date { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--mid); white-space: nowrap; }
-.scan-finding { font-size: 13px; color: var(--mid); line-height: 1.5; }
+.scan-pkg { font-weight: 600; font-size: 15px; }
+.scan-sub { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--mid); margin-top: 4px; }
+.scan-eco { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--mid); white-space: nowrap; }
+.scan-date { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--mid); white-space: nowrap; }
+.scan-finding { font-size: 14px; color: var(--mid); line-height: 1.6; }
 
 /* ── Risk/verdict badges ── */
 .risk-h { color: var(--red); font-family: 'Space Mono', monospace; font-size: 11px; font-weight: 700; white-space: nowrap; }
@@ -512,7 +512,7 @@ code { font-family: 'Space Mono', monospace; font-size: 0.85em; background: #ebe
 .verdict-banner {
     background: var(--ink);
     color: var(--paper);
-    padding: 28px 40px;
+    padding: 32px 56px;
     display: grid;
     grid-template-columns: 1fr auto;
     align-items: center;
@@ -520,14 +520,14 @@ code { font-family: 'Space Mono', monospace; font-size: 0.85em; background: #ebe
     border-bottom: 4px solid var(--ink);
 }
 .verdict-pkg {
-    font-size: 22px;
+    font-size: 28px;
     font-weight: 700;
     letter-spacing: -0.01em;
     margin-bottom: 6px;
 }
 .verdict-meta {
     font-family: 'Space Mono', monospace;
-    font-size: 11px;
+    font-size: 12px;
     color: #888;
     line-height: 2;
 }
@@ -535,7 +535,7 @@ code { font-family: 'Space Mono', monospace; font-size: 0.85em; background: #ebe
 .verdict-risk-col { text-align: right; }
 .verdict-risk-label {
     font-family: 'Space Mono', monospace;
-    font-size: 10px;
+    font-size: 11px;
     color: #666;
     text-transform: uppercase;
     letter-spacing: 0.1em;
@@ -543,7 +543,7 @@ code { font-family: 'Space Mono', monospace; font-size: 0.85em; background: #ebe
 }
 .verdict-risk-val {
     font-family: 'Space Mono', monospace;
-    font-size: 28px;
+    font-size: 32px;
     font-weight: 700;
 }
 .verdict-risk-val.risk-high { color: var(--red); }
@@ -553,10 +553,10 @@ code { font-family: 'Space Mono', monospace; font-size: 0.85em; background: #ebe
 /* ── Body grid (for report page) ── */
 .body-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 360px;
-    max-width: 1280px;
+    grid-template-columns: minmax(0, 1fr) 420px;
+    max-width: 1440px;
     margin: 0 auto;
-    padding: 0 40px 80px;
+    padding: 0 56px 88px;
     gap: 0;
 }
 .main-col {
@@ -572,6 +572,7 @@ code { font-family: 'Space Mono', monospace; font-size: 0.85em; background: #ebe
     top: 24px;
     align-self: start;
     max-height: calc(100vh - 32px);
+    overflow-x: hidden;
     overflow-y: auto;
 }
 
@@ -801,18 +802,25 @@ code { font-family: 'Space Mono', monospace; font-size: 0.85em; background: #ebe
     justify-content: space-between;
     padding: 8px 0;
     border-bottom: 1px solid var(--rule);
-    font-size: 14px;
+    font-size: 15px;
     gap: 12px;
 }
 .side-row:last-child { border-bottom: none; }
-.side-key { color: var(--mid); font-size: 13px; flex-shrink: 0; }
-.side-val { font-family: 'Space Mono', monospace; font-size: 13px; text-align: right; }
+.side-key { color: var(--mid); font-size: 14px; flex-shrink: 0; }
+.side-val { font-family: 'Space Mono', monospace; font-size: 14px; text-align: right; }
 
-.stat-trio { display: grid; grid-template-columns: 1fr 1fr 1fr; }
-.stat-trio-item { padding: 14px 12px; border-right: 1px solid var(--ink); text-align: center; }
+.stat-trio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.stat-trio-item { min-width: 0; padding: 16px 8px 14px; border-right: 1px solid var(--ink); text-align: center; }
 .stat-trio-item:last-child { border-right: none; }
-.stat-num { font-family: 'Space Mono', monospace; font-size: 24px; font-weight: 700; line-height: 1; }
-.stat-lbl { font-size: 11px; color: var(--mid); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 5px; }
+.stat-num {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(20px, 1.8vw, 28px);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.05em;
+    white-space: nowrap;
+}
+.stat-lbl { font-size: 12px; color: var(--mid); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 6px; }
 
 .sop-item {
     display: flex;
@@ -862,14 +870,14 @@ code { font-family: 'Space Mono', monospace; font-size: 0.85em; background: #ebe
 /* ── Queue states ── */
 .queue-item { border: 2px solid var(--ink); margin-bottom: 16px; }
 .queue-item-head {
-    padding: 14px 18px;
+    padding: 16px 20px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 16px;
     border-bottom: 1px solid var(--rule);
 }
-.queue-pkg { font-weight: 600; font-size: 14px; }
+.queue-pkg { font-weight: 600; font-size: 17px; }
 .queue-status {
     font-family: 'Space Mono', monospace;
     font-size: 10px;
@@ -883,10 +891,10 @@ code { font-family: 'Space Mono', monospace; font-size: 0.85em; background: #ebe
 .queue-status.complete { border-color: var(--green); color: var(--green); }
 .queue-status.failed { border-color: var(--red); color: var(--red); }
 
-.queue-item-body { padding: 14px 18px; }
+.queue-item-body { padding: 16px 20px; }
 .queue-meta {
     font-family: 'Space Mono', monospace;
-    font-size: 11px;
+    font-size: 12px;
     color: var(--mid);
 }
 .queue-progress {
@@ -975,5 +983,14 @@ code { font-family: 'Space Mono', monospace; font-size: 0.85em; background: #ebe
         position: static;
         max-height: none;
         overflow-y: visible;
+    }
+    .page-wrap {
+        padding: 0 24px 64px;
+    }
+    .masthead {
+        padding: 0 24px;
+    }
+    .verdict-banner {
+        padding: 24px;
     }
 }
