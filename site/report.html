@@ -3,7 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Security Report | OSS Watchdog</title>
+    <title>Security Report | Warden</title>
+    <meta name="description" content="Review Warden security analysis reports for open source repositories.">
+    <meta property="og:title" content="Security Report | Warden">
+    <meta property="og:description" content="Review Warden security analysis reports for open source repositories.">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Security Report | Warden">
+    <meta name="twitter:description" content="Review Warden security analysis reports for open source repositories.">
     <link rel="stylesheet" href="css/brutal.css">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
@@ -13,6 +20,15 @@
             font-size: 17px;
             line-height: 1.75;
             color: var(--ink);
+            padding: 28px 0 12px;
+            min-width: 0;
+            overflow-wrap: anywhere;
+        }
+        .markdown-body > p:first-of-type {
+            margin-bottom: 24px;
+            padding: 16px 20px;
+            border: 1px solid var(--rule);
+            background: #efebe4;
         }
         .markdown-body h1 { display: none; }
         .markdown-body h2 {
@@ -46,15 +62,29 @@
             line-height: 1.5;
             margin: 16px 0;
         }
+        .markdown-body pre.evidence-section-item {
+            background: #efebe4;
+            color: var(--ink);
+            border: 1px solid var(--rule);
+        }
         .markdown-body code {
             font-family: 'Space Mono', monospace;
             font-size: 0.85em;
             background: #ebe8e2;
             padding: 1px 5px;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            word-break: break-word;
         }
         .markdown-body pre code {
             background: none;
             padding: 0;
+            color: inherit;
+            white-space: pre;
+            overflow-wrap: normal;
+            word-break: normal;
+        }
+        .markdown-body pre.evidence-section-item code {
             color: inherit;
         }
         .markdown-body ul, .markdown-body ol {
@@ -82,11 +112,6 @@
 
     <header class="masthead">
         <div class="masthead-top">
-            <div class="masthead-meta">
-                <span>SOP v1.4</span>
-                <span id="current-date"></span>
-                <span>ZERO-TRUST POSTURE</span>
-            </div>
             <nav class="masthead-nav">
                 <a href="index.html">Submit</a>
                 <a href="queue.html">Queue</a>
@@ -94,8 +119,8 @@
             </nav>
         </div>
         <div class="masthead-title">
-            <h1>OSS Watchdog</h1>
-            <div class="tagline">Adversarial Security Analysis for Open Source</div>
+            <a href="index.html" class="masthead-home-link"><h1>Warden</h1></a>
+            <div class="tagline">Adversarial Security Review for Open Source Repositories</div>
         </div>
     </header>
 
@@ -112,7 +137,7 @@
 
     <script src="js/app.js?v=2"></script>
     <script>
-        document.getElementById('current-date').textContent = new Date().toISOString().split('T')[0];
+        marked.setOptions({ breaks: true, gfm: true });
         
         var reportId = App.getParam('id');
         
@@ -123,7 +148,19 @@
         } else {
             App.loadReport(reportId)
                 .then(function(report) {
-                    document.title = report.owner + '/' + report.repo + ' — Security Report | OSS Watchdog';
+                    var reportTitle = report.owner + '/' + report.repo + ' — Security Report | Warden';
+                    var reportDescription = 'Warden security review for ' + report.owner + '/' + report.repo + '.';
+                    document.title = reportTitle;
+                    var metaDescription = document.querySelector('meta[name="description"]');
+                    var ogTitle = document.querySelector('meta[property="og:title"]');
+                    var ogDescription = document.querySelector('meta[property="og:description"]');
+                    var twitterTitle = document.querySelector('meta[name="twitter:title"]');
+                    var twitterDescription = document.querySelector('meta[name="twitter:description"]');
+                    if (metaDescription) metaDescription.setAttribute('content', reportDescription);
+                    if (ogTitle) ogTitle.setAttribute('content', reportTitle);
+                    if (ogDescription) ogDescription.setAttribute('content', reportDescription);
+                    if (twitterTitle) twitterTitle.setAttribute('content', reportTitle);
+                    if (twitterDescription) twitterDescription.setAttribute('content', reportDescription);
                     document.getElementById('breadcrumb-pkg').textContent = report.owner + ' / ' + report.repo;
                     
                     if (report.format === 'markdown' && report.content) {
@@ -138,6 +175,28 @@
                     document.getElementById('breadcrumb-pkg').textContent = 'Not Found';
                 });
         }
+
+        window.deleteCurrentReport = function(currentReportId) {
+            if (!currentReportId) return;
+            var ok = window.confirm('Delete this report? This cannot be undone.');
+            if (!ok) return;
+
+            App.removeReport(currentReportId)
+                .then(function() {
+                    window.location.href = 'reports.html';
+                })
+                .catch(function(err) {
+                    alert('Failed to delete report: ' + err.message);
+                });
+        };
+
+        window.regenerateReportItem = function(reportId, owner, repo) {
+            App.openRegenerationDialog({
+                id: reportId,
+                owner: owner,
+                repo: repo
+            });
+        };
         
         function renderMarkdownReport(report) {
             var container = document.getElementById('report-container');
@@ -178,6 +237,7 @@
             
             // Main column with markdown content
             html += '<div class="main-col">';
+            html += App.renderApprovalConditionsCallout(report);
             html += '<div class="markdown-body">';
             html += marked.parse(content);
             html += '</div>';
@@ -222,11 +282,14 @@
                     '</div>' +
                 '</div>';
             }
+
+            html += App.renderReportDeleteBlock(report);
             
             html += '</div>'; // side-col
             html += '</div>'; // body-grid
             
             container.innerHTML = html;
+            App.enhanceMarkdownEvidenceFormatting(container);
         }
     </script>
 </body>

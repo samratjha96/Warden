@@ -105,11 +105,13 @@ def build_report(
     report = {
         "id": job["id"],
         "url": job["url"],
+        "provider": job.get("provider", "github"),
         "owner": job["owner"],
         "repo": job["repo"],
         "analyzed": analyzed_date,
         "format": "markdown",
         "content": markdown_content,
+        "options": job.get("options", {}),
     }
     report.update(metadata)
     return report

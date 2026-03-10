@@ -3,18 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OSS Watchdog | Adversarial Security Analysis</title>
+    <title>Warden | Adversarial Security Review</title>
+    <meta name="description" content="Warden performs adversarial security review of open source repositories and turns each analysis into an enterprise deployment decision.">
+    <meta property="og:title" content="Warden">
+    <meta property="og:description" content="Adversarial security review for open source repositories.">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Warden">
+    <meta name="twitter:description" content="Adversarial security review for open source repositories.">
     <link rel="stylesheet" href="css/brutal.css">
 </head>
 <body>
 
     <header class="masthead">
         <div class="masthead-top">
-            <div class="masthead-meta">
-                <span>SOP v1.4</span>
-                <span id="current-date"></span>
-                <span>ZERO-TRUST POSTURE</span>
-            </div>
             <nav class="masthead-nav">
                 <a href="index.html" class="active">Submit</a>
                 <a href="queue.html">Queue</a>
@@ -22,8 +24,8 @@
             </nav>
         </div>
         <div class="masthead-title">
-            <h1>OSS Watchdog</h1>
-            <div class="tagline">Adversarial Security Analysis for Open Source</div>
+            <a href="index.html" class="masthead-home-link"><h1>Warden</h1></a>
+            <div class="tagline">Adversarial Security Review for Open Source Repositories</div>
         </div>
     </header>
 
@@ -70,21 +72,6 @@
                 Repos cloned shallow into <code>/tmp</code> — deleted after analysis.
             </p>
 
-            <div class="feature-row">
-                <div class="feature-item">
-                    <div class="feature-num">17</div>
-                    <div class="feature-label">Security checks applied</div>
-                </div>
-                <div class="feature-item">
-                    <div class="feature-num">0</div>
-                    <div class="feature-label">Trust given to docs or claims</div>
-                </div>
-                <div class="feature-item">
-                    <div class="feature-num">∅</div>
-                    <div class="feature-label">Prompt injection exemptions</div>
-                </div>
-            </div>
-
             <div class="principle-block">
                 <div class="col-label">Zero-Trust Principles</div>
                 <div class="principle">
@@ -124,28 +111,30 @@
                 <colgroup>
                     <col style="width:210px">
                     <col style="width:110px">
-                    <col style="width:100px">
-                    <col style="width:46px">
-                    <col>
-                    <col style="width:96px">
-                </colgroup>
-                <thead>
-                    <tr>
-                        <th>Package</th>
-                        <th>Ecosystem</th>
-                        <th>Analyzed</th>
-                        <th>Risk</th>
-                        <th>Key Finding</th>
-                        <th style="text-align:right">Verdict</th>
-                    </tr>
-                </thead>
-                <tbody id="recent-table-body">
-                    <tr>
-                        <td colspan="6" class="empty-state">
-                            <div class="empty-state-title">No analyses yet</div>
-                            <div class="empty-state-desc">Submit a repository above to get started</div>
-                        </td>
-                    </tr>
+                <col style="width:100px">
+                <col style="width:46px">
+                <col>
+                <col style="width:96px">
+                <col style="width:78px">
+            </colgroup>
+            <thead>
+                <tr>
+                    <th>Package</th>
+                    <th>Ecosystem</th>
+                    <th>Analyzed</th>
+                    <th>Risk</th>
+                    <th>Key Finding</th>
+                    <th style="text-align:right">Verdict</th>
+                    <th style="text-align:right">Action</th>
+                </tr>
+            </thead>
+            <tbody id="recent-table-body">
+                <tr>
+                    <td colspan="7" class="empty-state">
+                        <div class="empty-state-title">No analyses yet</div>
+                        <div class="empty-state-desc">Submit a repository above to get started</div>
+                    </td>
+                </tr>
                 </tbody>
             </table>
         </div>
@@ -154,7 +143,6 @@
 
     <script src="js/app.js"></script>
     <script>
-        document.getElementById('current-date').textContent = new Date().toISOString().split('T')[0];
         
         document.getElementById('submit-form').addEventListener('submit', function(e) {
             e.preventDefault();
@@ -172,6 +160,14 @@
             App.renderRecentTable(reports, document.getElementById('recent-table-body'));
             App.updateVerdictCounts(reports);
         });
+
+        window.regenerateReportItem = function(reportId, owner, repo) {
+            App.openRegenerationDialog({
+                id: reportId,
+                owner: owner,
+                repo: repo
+            });
+        };
     </script>
 </body>
 </html>

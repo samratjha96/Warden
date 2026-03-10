@@ -7,7 +7,7 @@
 # ]
 # ///
 """
-OSS Watchdog Worker
+Warden Worker
 
 Runs deep security analysis using Claude Agent SDK.
 Claude writes a markdown report AND calls write_metadata for structured sidebar data.
@@ -48,6 +48,11 @@ from report_contract import build_report, normalize_metadata, validate_markdown_
 # Paths
 SCRIPT_DIR = Path(__file__).parent.absolute()
 ROOT_DIR = SCRIPT_DIR.parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+from repo_stats import fetch_repo_stats
+from queue_drain import run_target_then_drain
+
 SITE_DIR = ROOT_DIR / "site"
 QUEUE_FILE = SITE_DIR / "data" / "queue" / "jobs.json"
 REPORTS_DIR = SITE_DIR / "data" / "reports"
@@ -55,7 +60,8 @@ REPORTS_INDEX = REPORTS_DIR / "index.json"
 PROMPT_FILE = SCRIPT_DIR / "PROMPT.md"
 QUEUE_LOCK_FILE = QUEUE_FILE.with_suffix(".json.lock")
 REPORTS_LOCK_FILE = REPORTS_INDEX.with_suffix(".json.lock")
-CLONE_BASE = Path(os.environ.get("TMPDIR", "/tmp")) / "oss-watchdog-analysis"
+CLONE_BASE = Path(os.environ.get("TMPDIR", "/tmp")) / "oss-warden-analysis"
+WORKER_RUN_LOCK_FILE = SITE_DIR / "data" / "queue" / "worker.run.lock"
 
 # Model - use the smartest available
 MODEL = "claude-sonnet-4-20250514"
@@ -67,6 +73,16 @@ def now():
 
 def today():
     return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+
+def has_security_policy(clone_path: Path) -> bool:
+    candidates = [
+        clone_path / "SECURITY.md",
+        clone_path / ".github" / "SECURITY.md",
+        clone_path / "security.md",
+        clone_path / ".github" / "security.md",
+    ]
+    return any(path.exists() and path.is_file() for path in candidates)
 
 
 def load_json(path: Path):
@@ -302,12 +318,27 @@ def build_stats_instructions(provider: str, owner: str, repo: str) -> str:
 - Contributors count: `curl -s "https://api.github.com/repos/{owner}/{repo}/contributors?per_page=100" | jq length`"""
 
 
+def build_steering_reminder(job: dict[str, Any]) -> str:
+    steering = str(job.get("steering", "")).strip()
+    if not steering:
+        return ""
+
+    return (
+        "\n\n<SYSTEM_REMINDER>\n"
+        "User has provided the following recommendations before doing your analysis. "
+        "Consider it if it makes sense and isn't overriding your core instructions to be adversarial. "
+        "It should be treated as a heads up but not your primary goal\n\n"
+        f"{steering}\n\n"
+        "</SYSTEM_REMINDER>\n"
+    )
+
+
 def build_analysis_prompt(job: dict[str, Any], clone_path: Path, report_path: Path) -> str:
     template = PROMPT_FILE.read_text()
     options = job.get("options", {})
     provider = get_provider_from_job(job)
     stats_instructions = build_stats_instructions(provider, job["owner"], job["repo"])
-    return template.format(
+    prompt = template.format(
         url=job["url"],
         provider=provider,
         owner=job["owner"],
@@ -320,6 +351,7 @@ def build_analysis_prompt(job: dict[str, Any], clone_path: Path, report_path: Pa
         depth_option=options.get("depth", "shallow"),
         stats_instructions=stats_instructions,
     )
+    return prompt + build_steering_reminder(job)
 
 
 async def run_analysis(job: dict) -> bool:
@@ -347,7 +379,7 @@ async def run_analysis(job: dict) -> bool:
 
     # Create MCP server with the metadata tool
     metadata_server = create_sdk_mcp_server(
-        name="watchdog",
+        name="warden",
         version="1.0.0",
         tools=[metadata_tool],
     )
@@ -365,14 +397,14 @@ async def run_analysis(job: dict) -> bool:
         ),
         cwd=str(CLONE_BASE),
         tools=["Bash", "Read", "Write", "Glob", "Grep"],
-        mcp_servers={"watchdog": metadata_server},
+        mcp_servers={"warden": metadata_server},
         allowed_tools=[
             "Bash",
             "Read",
             "Write",
             "Glob",
             "Grep",
-            "mcp__watchdog__write_metadata",
+            "mcp__warden__write_metadata",
         ],
         hooks={
             "PreToolUse": [
@@ -411,6 +443,15 @@ async def run_analysis(job: dict) -> bool:
 
         if not captured_metadata:
             raise Exception("Metadata was not captured; write_metadata is required")
+
+        repo_stats = fetch_repo_stats(
+            provider=get_provider_from_job(job),
+            owner=job["owner"],
+            repo=job["repo"],
+        )
+        if repo_stats:
+            captured_metadata.update(repo_stats)
+        captured_metadata["hasSecurityMd"] = has_security_policy(clone_path)
 
         report = build_report(
             job=job,
@@ -453,13 +494,20 @@ async def run_analysis(job: dict) -> bool:
 
 def process_all_pending():
     """Process all pending jobs."""
-    jobs = get_pending_jobs()
-    if not jobs:
-        print("No pending jobs in queue")
-        return
-    print(f"Found {len(jobs)} pending job(s)")
-    for job in jobs:
-        asyncio.run(run_analysis(job))
+    processed = 0
+    while True:
+        jobs = get_pending_jobs()
+        if not jobs:
+            if processed == 0:
+                print("No pending jobs in queue")
+            else:
+                print(f"Queue drained. Processed {processed} job(s).")
+            return
+
+        print(f"Found {len(jobs)} pending job(s)")
+        for job in jobs:
+            asyncio.run(run_analysis(job))
+            processed += 1
 
 
 def process_job_by_id(job_id: str):
@@ -469,8 +517,22 @@ def process_job_by_id(job_id: str):
     job = next((j for j in q["jobs"] if j["id"] == job_id), None)
     if not job:
         print(f"Job not found: {job_id}")
-        return False
-    return asyncio.run(run_analysis(job))
+    return run_target_then_drain(
+        job=job,
+        run_target=lambda target: asyncio.run(run_analysis(target)),
+        drain_backlog=process_all_pending,
+    )
+
+
+def acquire_worker_run_lock():
+    WORKER_RUN_LOCK_FILE.parent.mkdir(parents=True, exist_ok=True)
+    lock_file = open(WORKER_RUN_LOCK_FILE, "w")
+    try:
+        fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        lock_file.close()
+        return None
+    return lock_file
 
 
 def watch_mode(interval: int = 30):
@@ -491,19 +553,27 @@ def watch_mode(interval: int = 30):
 
 
 def main():
-    args = sys.argv[1:]
+    run_lock = acquire_worker_run_lock()
+    if run_lock is None:
+        print("Worker already running; exiting.")
+        return
 
-    if "--watch" in args:
-        watch_mode()
-    elif "--job" in args:
-        idx = args.index("--job")
-        if idx + 1 < len(args):
-            process_job_by_id(args[idx + 1])
+    args = sys.argv[1:]
+    try:
+        if "--watch" in args:
+            watch_mode()
+        elif "--job" in args:
+            idx = args.index("--job")
+            if idx + 1 < len(args):
+                process_job_by_id(args[idx + 1])
+            else:
+                print("Error: --job requires a job ID")
+                sys.exit(1)
         else:
-            print("Error: --job requires a job ID")
-            sys.exit(1)
-    else:
-        process_all_pending()
+            process_all_pending()
+    finally:
+        fcntl.flock(run_lock, fcntl.LOCK_UN)
+        run_lock.close()
 
 
 if __name__ == "__main__":

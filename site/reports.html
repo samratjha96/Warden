@@ -3,18 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>All Reports | OSS Watchdog</title>
+    <title>All Reports | Warden</title>
+    <meta name="description" content="Browse completed Warden security reviews for open source repositories.">
+    <meta property="og:title" content="All Reports | Warden">
+    <meta property="og:description" content="Browse completed Warden security reviews for open source repositories.">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="All Reports | Warden">
+    <meta name="twitter:description" content="Browse completed Warden security reviews for open source repositories.">
     <link rel="stylesheet" href="css/brutal.css">
 </head>
 <body>
 
     <header class="masthead">
         <div class="masthead-top">
-            <div class="masthead-meta">
-                <span>SOP v1.4</span>
-                <span id="current-date"></span>
-                <span>ZERO-TRUST POSTURE</span>
-            </div>
             <nav class="masthead-nav">
                 <a href="index.html">Submit</a>
                 <a href="queue.html">Queue</a>
@@ -22,8 +24,8 @@
             </nav>
         </div>
         <div class="masthead-title">
-            <h1>OSS Watchdog</h1>
-            <div class="tagline">Adversarial Security Analysis for Open Source</div>
+            <a href="index.html" class="masthead-home-link"><h1>Warden</h1></a>
+            <div class="tagline">Adversarial Security Review for Open Source Repositories</div>
         </div>
     </header>
 
@@ -68,6 +70,7 @@
                 <col style="width:46px">
                 <col>
                 <col style="width:96px">
+                <col style="width:150px">
             </colgroup>
             <thead>
                 <tr>
@@ -77,11 +80,12 @@
                     <th>Risk</th>
                     <th>Key Finding</th>
                     <th style="text-align:right">Verdict</th>
+                    <th style="text-align:right">Action</th>
                 </tr>
             </thead>
             <tbody id="reports-table-body">
                 <tr>
-                    <td colspan="6" class="loading-skeleton" style="height:200px;"></td>
+                    <td colspan="7" class="loading-skeleton" style="height:200px;"></td>
                 </tr>
             </tbody>
         </table>
@@ -90,7 +94,6 @@
 
     <script src="js/app.js"></script>
     <script>
-        document.getElementById('current-date').textContent = new Date().toISOString().split('T')[0];
         
         var allReports = [];
         
@@ -107,10 +110,35 @@
                 return matchSearch && matchVerdict && matchRisk;
             });
             
-            App.renderRecentTable(filtered, document.getElementById('reports-table-body'));
+            App.renderReportsTable(filtered, document.getElementById('reports-table-body'));
             document.getElementById('result-count').textContent = 
                 'Showing ' + filtered.length + ' of ' + allReports.length + ' results';
         }
+
+        window.deleteReportItem = function(reportId) {
+            if (!reportId) return;
+            var ok = window.confirm('Delete this report? This cannot be undone.');
+            if (!ok) return;
+
+            App.removeReport(reportId)
+                .then(function() {
+                    allReports = allReports.filter(function(r) {
+                        return r.id !== reportId;
+                    });
+                    filterReports();
+                })
+                .catch(function(err) {
+                    alert('Failed to delete report: ' + err.message);
+                });
+        };
+
+        window.regenerateReportItem = function(reportId, owner, repo) {
+            App.openRegenerationDialog({
+                id: reportId,
+                owner: owner,
+                repo: repo
+            });
+        };
         
         // Load all reports
         App.loadReportsIndex().then(function(data) {

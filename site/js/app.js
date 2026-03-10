@@ -1,5 +1,5 @@
 /**
- * OSS Watchdog - Static Site Application
+ * Warden - Static Site Application
  * 
  * This is a minimal client-side application for displaying security reports.
  * Reports are generated asynchronously and placed in /data/reports/ as JSON files.
@@ -22,6 +22,40 @@ var App = (function() {
                 }
                 return response.json();
             });
+    }
+
+    function fetchJSONFresh(url) {
+        return fetch(url, { cache: 'no-store' })
+            .then(function(response) {
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status);
+                }
+                return response.json();
+            });
+    }
+
+    function parseApiResponse(response) {
+        var contentType = (response.headers.get('content-type') || '').toLowerCase();
+        if (contentType.indexOf('application/json') !== -1) {
+            return response.json().then(function(data) {
+                if (!response.ok) {
+                    var err = new Error(data.error || ('HTTP ' + response.status));
+                    err.code = data.code || '';
+                    throw err;
+                }
+                return data;
+            });
+        }
+
+        return response.text().then(function(text) {
+            var message = response.ok
+                ? 'Unexpected non-JSON response from server.'
+                : 'Unexpected non-JSON response from server. The backend may be outdated or unavailable.';
+            var err = new Error(message);
+            err.code = 'unexpected_non_json_response';
+            err.responseText = text;
+            throw err;
+        });
     }
     
     // Load reports index
@@ -83,14 +117,7 @@ var App = (function() {
             })
         })
         .then(function(r) {
-            return r.json().then(function(data) {
-                if (!r.ok) {
-                    var err = new Error(data.error || ('HTTP ' + r.status));
-                    err.code = data.code || '';
-                    throw err;
-                }
-                return data;
-            });
+            return parseApiResponse(r);
         })
         .then(function(data) {
             if (data.job) {
@@ -119,13 +146,122 @@ var App = (function() {
             method: 'DELETE'
         })
         .then(function(r) {
-            return r.json().then(function(data) {
-                if (!r.ok) {
-                    throw new Error(data.error || ('HTTP ' + r.status));
-                }
-                return data;
-            });
+            return parseApiResponse(r);
         });
+    }
+
+    // Remove report by ID
+    function removeReport(reportId) {
+        if (!reportId) return Promise.reject(new Error('Invalid report ID'));
+        return fetch('/api/reports/' + encodeURIComponent(reportId), {
+            method: 'DELETE'
+        })
+        .then(function(r) {
+            return parseApiResponse(r);
+        });
+    }
+
+    function requestReportRegeneration(reportId, steering) {
+        if (!reportId) return Promise.reject(new Error('Invalid report ID'));
+        return fetch('/api/reports/' + encodeURIComponent(reportId) + '/regenerate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                steering: steering || ''
+            })
+        })
+        .then(function(r) {
+            return parseApiResponse(r);
+        });
+    }
+
+    function renderRegenerateIconButton(reportId, owner, repo) {
+        return '<button type="button" class="row-action-btn row-action-btn--subtle row-action-btn--icon" ' +
+            'title="Regenerate analysis" aria-label="Regenerate analysis" ' +
+            'onclick="event.stopPropagation(); window.regenerateReportItem && window.regenerateReportItem(\'' + escapeHtml(reportId) + '\', \'' + escapeHtml(owner) + '\', \'' + escapeHtml(repo) + '\')">' +
+            '&#8635;</button>';
+    }
+
+    function closeRegenerationDialog() {
+        var overlay = document.getElementById('regeneration-overlay');
+        if (!overlay) {
+            return;
+        }
+        overlay.classList.remove('is-open');
+    }
+
+    function ensureRegenerationDialog() {
+        var overlay = document.getElementById('regeneration-overlay');
+        if (overlay) {
+            return overlay;
+        }
+
+        overlay = document.createElement('div');
+        overlay.id = 'regeneration-overlay';
+        overlay.className = 'dialog-overlay';
+        overlay.innerHTML =
+            '<div class="dialog-card" role="dialog" aria-modal="true" aria-labelledby="regeneration-title">' +
+                '<div class="dialog-title" id="regeneration-title">Regenerate Analysis</div>' +
+                '<div class="dialog-copy" id="regeneration-copy"></div>' +
+                '<label class="dialog-label" for="regeneration-steering">Optional steering</label>' +
+                '<textarea id="regeneration-steering" class="dialog-textarea" placeholder="Focus on CI/CD integrity, authz boundaries, install hooks, or any other surface."></textarea>' +
+                '<div class="dialog-actions">' +
+                    '<button type="button" class="row-action-btn row-action-btn--subtle" id="regeneration-cancel">Cancel</button>' +
+                    '<button type="button" class="row-action-btn" id="regeneration-submit">Queue Regen</button>' +
+                '</div>' +
+            '</div>';
+
+        overlay.addEventListener('click', function(event) {
+            if (event.target === overlay) {
+                closeRegenerationDialog();
+            }
+        });
+
+        document.body.appendChild(overlay);
+        document.getElementById('regeneration-cancel').addEventListener('click', closeRegenerationDialog);
+        return overlay;
+    }
+
+    function openRegenerationDialog(report) {
+        if (!report || !report.id) {
+            return;
+        }
+
+        var overlay = ensureRegenerationDialog();
+        var steeringInput = document.getElementById('regeneration-steering');
+        var copy = document.getElementById('regeneration-copy');
+        var submit = document.getElementById('regeneration-submit');
+        var repoLabel = escapeHtml((report.owner || 'Unknown') + ' / ' + (report.repo || report.id));
+
+        copy.innerHTML =
+            'Queue a fresh security pass for <strong>' + repoLabel + '</strong>. ' +
+            'The completed analysis will replace the existing report entry.';
+        steeringInput.value = '';
+        overlay.classList.add('is-open');
+        steeringInput.focus();
+
+        submit.onclick = function() {
+            submit.disabled = true;
+            requestReportRegeneration(report.id, steeringInput.value)
+                .then(function() {
+                    closeRegenerationDialog();
+                    window.location.href = 'queue.html';
+                })
+                .catch(function(err) {
+                    if (err.code === 'duplicate_queue_entry') {
+                        alert(
+                            'REGENERATION ALREADY ACTIVE\n\n' +
+                            err.message + '\n\n' +
+                            'Open Queue to track or remove the active run before trying again.'
+                        );
+                    } else {
+                        alert('Regeneration failed: ' + err.message);
+                    }
+                })
+                .finally(function() {
+                    submit.disabled = false;
+                });
+        };
     }
     
     // Format risk level for display
@@ -152,7 +288,7 @@ var App = (function() {
     // Render recent reports table
     function renderRecentTable(reports, tbody) {
         if (!reports || reports.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="empty-state">' +
+            tbody.innerHTML = '<tr><td colspan="7" class="empty-state">' +
                 '<div class="empty-state-title">No analyses yet</div>' +
                 '<div class="empty-state-desc">Submit a repository above to get started</div>' +
                 '</td></tr>';
@@ -173,6 +309,48 @@ var App = (function() {
                 '<td class="' + risk.class + '">' + risk.text + '</td>' +
                 '<td class="scan-finding">' + escapeHtml(r.keyFinding) + '</td>' +
                 '<td class="verdict-cell ' + verdict.class + '">' + verdict.text + '</td>' +
+                '<td style="text-align:right;">' +
+                    '<div class="row-action-group">' +
+                        renderRegenerateIconButton(r.id, r.owner, r.repo) +
+                    '</div>' +
+                '</td>' +
+                '</tr>';
+        });
+        tbody.innerHTML = html;
+    }
+
+    // Render reports table with delete actions
+    function renderReportsTable(reports, tbody) {
+        if (!reports || reports.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="empty-state">' +
+                '<div class="empty-state-title">No analyses yet</div>' +
+                '<div class="empty-state-desc">Submit a repository above to get started</div>' +
+                '</td></tr>';
+            return;
+        }
+
+        var html = '';
+        reports.forEach(function(r) {
+            var risk = formatRisk(r.risk);
+            var verdict = formatVerdict(r.verdict);
+            html += '<tr onclick="window.location.href=\'report.html?id=' + encodeURIComponent(r.id) + '\'">' +
+                '<td>' +
+                    '<div class="scan-pkg">' + escapeHtml(r.owner + ' / ' + r.repo) + '</div>' +
+                    '<div class="scan-sub">commit ' + escapeHtml(r.commit) + '</div>' +
+                '</td>' +
+                '<td class="scan-eco">' + escapeHtml(r.ecosystem) + '</td>' +
+                '<td class="scan-date">' + escapeHtml(r.analyzed) + '</td>' +
+                '<td class="' + risk.class + '">' + risk.text + '</td>' +
+                '<td class="scan-finding">' + escapeHtml(r.keyFinding) + '</td>' +
+                '<td class="verdict-cell ' + verdict.class + '">' + verdict.text + '</td>' +
+                '<td style="text-align:right;">' +
+                    '<div class="row-action-group">' +
+                        renderRegenerateIconButton(r.id, r.owner, r.repo) +
+                        '<button type="button" class="row-action-btn" ' +
+                        'onclick="event.stopPropagation(); window.deleteReportItem && window.deleteReportItem(\'' + escapeHtml(r.id) + '\')">' +
+                        'Delete</button>' +
+                    '</div>' +
+                '</td>' +
                 '</tr>';
         });
         tbody.innerHTML = html;
@@ -208,6 +386,158 @@ var App = (function() {
     function getParam(name) {
         var params = new URLSearchParams(window.location.search);
         return params.get(name);
+    }
+
+    function renderApprovalConditionsCallout(report) {
+        var conditions = report && Array.isArray(report.approvalConditions)
+            ? report.approvalConditions.filter(function(condition) {
+                return typeof condition === 'string' && condition.trim().length > 0;
+            })
+            : [];
+
+        if (conditions.length === 0) {
+            return '';
+        }
+
+        var html = '<div class="approval-callout">' +
+            '<div class="approval-callout-title">Approval Conditions</div>' +
+            '<div class="approval-callout-copy">Enterprise use should proceed only if every condition below is satisfied.</div>' +
+            '<ol class="approval-callout-list">';
+
+        conditions.forEach(function(condition) {
+            html += '<li>' + escapeHtml(condition) + '</li>';
+        });
+
+        html += '</ol></div>';
+        return html;
+    }
+
+    function renderReportDeleteBlock(report) {
+        if (!report || !report.id) {
+            return '';
+        }
+
+        return '<div class="side-block">' +
+            '<div class="side-head">Report Actions</div>' +
+            '<div class="side-body">' +
+                '<button type="button" class="report-regenerate-btn" ' +
+                'onclick="window.regenerateReportItem && window.regenerateReportItem(\'' + escapeHtml(report.id) + '\', \'' + escapeHtml(report.owner) + '\', \'' + escapeHtml(report.repo) + '\')">' +
+                'Regenerate</button>' +
+                '<button type="button" class="report-delete-btn" ' +
+                'onclick="window.deleteCurrentReport && window.deleteCurrentReport(\'' + escapeHtml(report.id) + '\')">' +
+                'Delete Report</button>' +
+            '</div>' +
+        '</div>';
+    }
+
+    function looksLikeEvidenceReference(token) {
+        return token.indexOf('/') !== -1 ||
+            token.indexOf('.') !== -1 ||
+            /:\d/.test(token) ||
+            /file(?::\d+(?:-\d+)?)?$/i.test(token);
+    }
+
+    function wrapEvidenceTextNode(textNode) {
+        var text = textNode.nodeValue;
+        var pattern = /[A-Za-z0-9_.*@/.-]+(?::\d+(?:-\d+)?)?/g;
+        var fragment = document.createDocumentFragment();
+        var lastIndex = 0;
+        var matched = false;
+        var match;
+
+        while ((match = pattern.exec(text)) !== null) {
+            var token = match[0];
+            if (!looksLikeEvidenceReference(token)) {
+                continue;
+            }
+
+            if (match.index > lastIndex) {
+                fragment.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+            }
+
+            var chip = document.createElement('span');
+            chip.className = 'evidence-ref';
+            chip.textContent = token;
+            fragment.appendChild(chip);
+
+            lastIndex = match.index + token.length;
+            matched = true;
+        }
+
+        if (!matched) {
+            return;
+        }
+
+        if (lastIndex < text.length) {
+            fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+        }
+
+        textNode.parentNode.replaceChild(fragment, textNode);
+    }
+
+    function enhanceMarkdownEvidenceFormatting(container) {
+        if (!container) {
+            return;
+        }
+
+        var body = container.querySelector('.markdown-body');
+        if (!body) {
+            return;
+        }
+
+        var inEvidenceSection = false;
+        Array.prototype.forEach.call(body.children, function(node) {
+            var tagName = node.tagName ? node.tagName.toLowerCase() : '';
+            if (tagName === 'h2') {
+                inEvidenceSection = node.textContent.trim().toLowerCase() === 'evidence appendix';
+                if (inEvidenceSection) {
+                    node.classList.add('evidence-section-title');
+                }
+                return;
+            }
+
+            if (!inEvidenceSection) {
+                return;
+            }
+
+            node.classList.add('evidence-section-item');
+            if (tagName === 'ul' || tagName === 'ol') {
+                node.classList.add('evidence-list');
+                Array.prototype.forEach.call(node.querySelectorAll('li'), function(item) {
+                    item.classList.add('evidence-list-item');
+                });
+            }
+
+            Array.prototype.forEach.call(node.querySelectorAll('code'), function(code) {
+                if (looksLikeEvidenceReference(code.textContent.trim())) {
+                    code.classList.add('evidence-ref');
+                }
+            });
+
+            var walker = document.createTreeWalker(
+                node,
+                NodeFilter.SHOW_TEXT,
+                {
+                    acceptNode: function(textNode) {
+                        if (!textNode.nodeValue.trim()) {
+                            return NodeFilter.FILTER_REJECT;
+                        }
+                        var parentTag = textNode.parentNode && textNode.parentNode.tagName;
+                        if (parentTag && ['CODE', 'PRE', 'A'].indexOf(parentTag) !== -1) {
+                            return NodeFilter.FILTER_REJECT;
+                        }
+                        return NodeFilter.FILTER_ACCEPT;
+                    }
+                }
+            );
+
+            var textNodes = [];
+            while (walker.nextNode()) {
+                textNodes.push(walker.currentNode);
+            }
+
+            textNodes.forEach(wrapEvidenceTextNode);
+        });
     }
     
     // Render full report page
@@ -250,10 +580,11 @@ var App = (function() {
         
         // Body grid
         html += '<div class="body-grid"><div class="main-col">';
+        html += renderApprovalConditionsCallout(report);
         
         // Executive Summary
         html += '<div class="section">' +
-            '<div class="section-label"><span>01</span> — Executive Summary</div>' +
+            '<div class="section-label"><span>01</span> - Executive Summary</div>' +
             '<table class="exec-table"><thead><tr>' +
             '<th style="width:38%">Category</th>' +
             '<th style="width:14%">Risk</th>' +
@@ -425,11 +756,14 @@ var App = (function() {
                 html += '</div></div>';
             }
         }
+
+        html += renderReportDeleteBlock(report);
         
         html += '</div>'; // end side-col
         html += '</div>'; // end body-grid
         
         container.innerHTML = html;
+        enhanceMarkdownEvidenceFormatting(container);
     }
     
     // Render queue page
@@ -494,18 +828,26 @@ var App = (function() {
     // Public API
     return {
         fetchJSON: fetchJSON,
+        fetchJSONFresh: fetchJSONFresh,
         loadReportsIndex: loadReportsIndex,
         loadQueueIndex: loadQueueIndex,
         loadReport: loadReport,
         loadRecentReports: loadRecentReports,
         submitJob: submitJob,
         removeQueueJob: removeQueueJob,
+        removeReport: removeReport,
+        requestReportRegeneration: requestReportRegeneration,
         formatRisk: formatRisk,
         formatVerdict: formatVerdict,
         renderRecentTable: renderRecentTable,
+        renderReportsTable: renderReportsTable,
         updateVerdictCounts: updateVerdictCounts,
         escapeHtml: escapeHtml,
         getParam: getParam,
+        openRegenerationDialog: openRegenerationDialog,
+        renderApprovalConditionsCallout: renderApprovalConditionsCallout,
+        renderReportDeleteBlock: renderReportDeleteBlock,
+        enhanceMarkdownEvidenceFormatting: enhanceMarkdownEvidenceFormatting,
         renderReport: renderReport,
         renderQueue: renderQueue
     };

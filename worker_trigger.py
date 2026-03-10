@@ -13,7 +13,7 @@ def build_worker_command(root_dir: Path, job_id: str) -> list[str]:
 
 def _open_worker_log_file() -> object:
     tmp_dir = os.environ.get("TMPDIR", "/tmp")
-    log_path = Path(tmp_dir) / "oss-watchdog-worker.log"
+    log_path = Path(tmp_dir) / "warden-worker.log"
     log_path.parent.mkdir(parents=True, exist_ok=True)
     return open(log_path, "a")
 

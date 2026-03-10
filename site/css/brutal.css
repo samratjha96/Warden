@@ -1,4 +1,4 @@
-/* OSS Watchdog - Brutal Design System */
+/* Warden - Brutal Design System */
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -26,8 +26,8 @@ code { font-family: 'Space Mono', monospace; font-size: 0.85em; background: #ebe
 .masthead-top {
     display: flex;
     align-items: stretch;
-    justify-content: space-between;
-    border-bottom: 1px solid var(--ink);
+    justify-content: flex-end;
+    border-bottom: none;
     padding: 10px 0;
 }
 .masthead-meta {
@@ -69,6 +69,8 @@ code { font-family: 'Space Mono', monospace; font-size: 0.85em; background: #ebe
     line-height: 1;
     text-transform: uppercase;
 }
+.masthead-home-link { display: inline-block; }
+.masthead-home-link:hover h1 { text-decoration: underline; }
 .masthead-title .tagline {
     font-size: 11px;
     font-family: 'Space Mono', monospace;
@@ -128,7 +130,7 @@ code { font-family: 'Space Mono', monospace; font-size: 0.85em; background: #ebe
 /* ── Submit form ── */
 .submit-section {
     padding: 32px 0 36px;
-    border-bottom: 3px solid var(--ink);
+    border-bottom: none;
 }
 .submit-form { border: 2px solid var(--ink); }
 .submit-url {
@@ -213,14 +215,14 @@ code { font-family: 'Space Mono', monospace; font-size: 0.85em; background: #ebe
 .principle-block {
     margin-top: 28px;
     padding-top: 18px;
-    border-top: 2px solid var(--ink);
+    border-top: none;
 }
 .principle {
     display: flex;
     gap: 14px;
     align-items: baseline;
-    padding: 6px 0;
-    border-bottom: 1px solid #ddd;
+    padding: 8px 0;
+    border-bottom: none;
     font-size: 13px;
 }
 .principle:last-child { border-bottom: none; }
@@ -368,6 +370,144 @@ code { font-family: 'Space Mono', monospace; font-size: 0.85em; background: #ebe
 .v-cond { color: var(--amber); }
 .v-pending { color: var(--mid); }
 
+.row-action-btn {
+    background: transparent;
+    border: 1px solid var(--ink);
+    padding: 4px 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink);
+    cursor: pointer;
+}
+.row-action-btn:hover {
+    background: var(--ink);
+    color: var(--paper);
+}
+.row-action-btn--subtle {
+    color: var(--mid);
+    border-color: var(--rule);
+}
+.row-action-btn--subtle:hover {
+    background: #ebe8e2;
+    color: var(--ink);
+}
+.row-action-btn--icon {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    line-height: 1;
+}
+.row-action-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.report-delete-btn {
+    width: 100%;
+    border: 2px solid var(--red);
+    background: transparent;
+    color: var(--red);
+    padding: 10px 12px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+}
+.report-delete-btn:hover {
+    background: var(--red);
+    color: var(--paper);
+}
+.report-regenerate-btn {
+    width: 100%;
+    border: 2px solid var(--ink);
+    background: transparent;
+    color: var(--ink);
+    padding: 10px 12px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    margin-bottom: 10px;
+}
+.report-regenerate-btn:hover {
+    background: #ebe8e2;
+}
+
+.dialog-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 10, 10, 0.32);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    z-index: 999;
+}
+.dialog-overlay.is-open {
+    display: flex;
+}
+.dialog-card {
+    width: min(560px, 100%);
+    background: var(--paper);
+    border: 2px solid var(--ink);
+    padding: 22px 22px 18px;
+    box-shadow: 10px 10px 0 rgba(10, 10, 10, 0.12);
+}
+.dialog-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 12px;
+}
+.dialog-copy {
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 14px;
+}
+.dialog-label {
+    display: block;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--mid);
+    margin-bottom: 8px;
+}
+.dialog-textarea {
+    width: 100%;
+    min-height: 120px;
+    resize: vertical;
+    border: 1px solid var(--ink);
+    background: transparent;
+    padding: 12px 14px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--ink);
+}
+.dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 14px;
+}
+
 /* ── Verdict banner ── */
 .verdict-banner {
     background: var(--ink);
@@ -413,19 +553,95 @@ code { font-family: 'Space Mono', monospace; font-size: 0.85em; background: #ebe
 /* ── Body grid (for report page) ── */
 .body-grid {
     display: grid;
-    grid-template-columns: 1fr 400px;
+    grid-template-columns: minmax(0, 1fr) 360px;
     max-width: 1280px;
     margin: 0 auto;
     padding: 0 40px 80px;
     gap: 0;
 }
 .main-col {
+    min-width: 0;
     padding-right: 40px;
     border-right: 2px solid var(--ink);
 }
 .side-col {
+    min-width: 0;
     padding-left: 32px;
     padding-top: 32px;
+    position: sticky;
+    top: 24px;
+    align-self: start;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+}
+
+.approval-callout {
+    margin-top: 32px;
+    margin-bottom: 4px;
+    border: 2px solid var(--amber);
+    background: #fff2e4;
+    padding: 20px 22px 18px;
+}
+.approval-callout-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--amber);
+    margin-bottom: 10px;
+}
+.approval-callout-copy {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--ink);
+    margin-bottom: 12px;
+}
+.approval-callout-list {
+    margin: 0;
+    padding-left: 22px;
+}
+.approval-callout-list li {
+    margin-bottom: 10px;
+    font-size: 15px;
+    line-height: 1.65;
+}
+.approval-callout-list li:last-child {
+    margin-bottom: 0;
+}
+
+.evidence-section-title {
+    margin-top: 56px;
+}
+.evidence-section-item {
+    margin-bottom: 18px;
+}
+.evidence-list {
+    list-style: none;
+    padding-left: 0;
+    margin: 10px 0 18px;
+}
+.evidence-list-item {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--rule);
+}
+.evidence-list-item:last-child {
+    border-bottom: none;
+}
+.markdown-body .evidence-ref {
+    display: inline-block;
+    max-width: 100%;
+    margin: 0 6px 4px 0;
+    padding: 2px 8px;
+    border: 1px solid var(--ink);
+    background: #ebe8e2;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    line-height: 1.45;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    vertical-align: baseline;
 }
 
 /* ── Section ── */
@@ -743,4 +959,21 @@ code { font-family: 'Space Mono', monospace; font-size: 0.85em; background: #ebe
     font-family: 'Space Mono', monospace;
     font-size: 12px;
     margin-bottom: 20px;
+}
+
+@media (max-width: 1024px) {
+    .body-grid {
+        grid-template-columns: 1fr;
+        padding: 0 24px 64px;
+    }
+    .main-col {
+        padding-right: 0;
+        border-right: none;
+    }
+    .side-col {
+        padding-left: 0;
+        position: static;
+        max-height: none;
+        overflow-y: visible;
+    }
 }
