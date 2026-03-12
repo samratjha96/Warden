@@ -15,6 +15,30 @@ def _coerce_int(value: Any, default: int = 0) -> int:
         return default
 
 
+def _stat_str(value: Any) -> str | None:
+    """Format an integer stat as a comma-separated string.
+
+    Returns None when the value is absent so the display can show '—'
+    rather than a misleading zero.
+    """
+    if value is None:
+        return None
+    try:
+        return f"{int(value):,}"
+    except (TypeError, ValueError):
+        return None
+
+
+def _stat_int(value: Any) -> int | None:
+    """Coerce to int, or None if absent."""
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def _coerce_bool(value: Any) -> bool:
     if isinstance(value, bool):
         return value
@@ -63,10 +87,10 @@ def normalize_metadata(args: dict[str, Any]) -> dict[str, Any]:
 
     scores = _normalize_scores(args.get("scores"))
     stats = {
-        "stars": f"{_coerce_int(args.get('stars'), 0):,}",
-        "forks": f"{_coerce_int(args.get('forks'), 0):,}",
-        "contributors": f"{_coerce_int(args.get('contributors'), 0):,}",
-        "openIssues": _coerce_int(args.get("openIssues"), 0),
+        "stars": _stat_str(args.get("stars")),
+        "forks": _stat_str(args.get("forks")),
+        "contributors": _stat_str(args.get("contributors")),
+        "openIssues": _stat_int(args.get("openIssues")),
         "created": created,
         "license": license_name,
         "hasSecurityMd": _coerce_bool(args.get("hasSecurityMd", False)),

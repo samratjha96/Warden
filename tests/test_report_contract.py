@@ -77,5 +77,24 @@ class ReportContractTests(unittest.TestCase):
         self.assertEqual(report["id"], "owner-repo-abcd1234")
 
 
+    def test_normalize_metadata_missing_stats_produces_nulls(self):
+        """When the agent omits stat fields (e.g. GitHub API failure), stats
+        must be None/null rather than zero so the display shows '—'."""
+        metadata = normalize_metadata(
+            {
+                "verdict": "approve",
+                "risk": "low",
+                "keyFinding": "Clean",
+                "commit": "abc123",
+                "ecosystem": "Node.js/npm",
+                # stars, forks, contributors, openIssues intentionally absent
+            }
+        )
+        self.assertIsNone(metadata["stats"]["stars"])
+        self.assertIsNone(metadata["stats"]["forks"])
+        self.assertIsNone(metadata["stats"]["contributors"])
+        self.assertIsNone(metadata["stats"]["openIssues"])
+
+
 if __name__ == "__main__":
     unittest.main()

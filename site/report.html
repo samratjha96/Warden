@@ -291,7 +291,7 @@
                 '</div>' +
                 '<div class="side-body">' +
                     '<div class="side-row"><span class="side-key">SECURITY.md</span><span class="side-val" style="color:' + (stats.hasSecurityMd ? 'var(--green)' : 'var(--red)') + ';">' + (stats.hasSecurityMd ? 'Present ✓' : 'Missing ✕') + '</span></div>' +
-                    '<div class="side-row"><span class="side-key">Open issues</span><span class="side-val">' + (stats.openIssues || 0) + '</span></div>' +
+                    '<div class="side-row"><span class="side-key">Open issues</span><span class="side-val">' + (stats.openIssues != null ? stats.openIssues : '—') + '</span></div>' +
                     '<div class="side-row"><span class="side-key">Created</span><span class="side-val">' + App.escapeHtml(stats.created || '—') + '</span></div>' +
                     '<div class="side-row"><span class="side-key">License</span><span class="side-val">' + App.escapeHtml(stats.license || '—') + '</span></div>' +
                 '</div>' +
