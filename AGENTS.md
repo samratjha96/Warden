@@ -7,7 +7,7 @@
 ## Run
 
 ```bash
-python server.py 8080 > /tmp/warden-server.log 2>&1 &
+python server.py > /tmp/warden-server.log 2>&1 &  # default port 12000
 uv run worker/worker.py          # drain all jobs
 uv run worker/worker.py --job <id>  # single job
 ```

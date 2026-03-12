@@ -28,7 +28,7 @@ from repo_url import parse_repo_url
 from submission_limits import SubmissionLimiter
 from worker_trigger import trigger_worker_for_job
 
-PORT = int(os.environ.get("PORT", 8080))
+PORT = int(os.environ.get("PORT", 12000))
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 SITE_DIR = os.path.join(ROOT_DIR, "site")
 QUEUE_FILE = os.path.join(SITE_DIR, "data", "queue", "jobs.json")
@@ -37,7 +37,9 @@ REPORTS_DIR = os.path.join(SITE_DIR, "data", "reports")
 REPORTS_INDEX_FILE = os.path.join(REPORTS_DIR, "index.json")
 REPORTS_LOCK_FILE = REPORTS_INDEX_FILE + ".lock"
 MAX_ACTIVE_JOBS = int(os.environ.get("MAX_ACTIVE_JOBS", "1"))
-SUBMIT_MIN_INTERVAL_SECONDS = float(os.environ.get("SUBMIT_MIN_INTERVAL_SECONDS", "1.0"))
+SUBMIT_MIN_INTERVAL_SECONDS = float(
+    os.environ.get("SUBMIT_MIN_INTERVAL_SECONDS", "1.0")
+)
 SUBMIT_WINDOW_SECONDS = int(os.environ.get("SUBMIT_WINDOW_SECONDS", "60"))
 SUBMIT_MAX_PER_WINDOW = int(os.environ.get("SUBMIT_MAX_PER_WINDOW", "30"))
 SUBMISSION_LIMITER = SubmissionLimiter(
@@ -140,9 +142,7 @@ class Handler(SimpleHTTPRequestHandler):
             "/data/queue/jobs.json",
             "/data/queue/index.json",
             "/data/reports/index.json",
-        } or (
-            self.path.startswith("/data/reports/") and self.path.endswith(".json")
-        )
+        } or (self.path.startswith("/data/reports/") and self.path.endswith(".json"))
 
     def end_headers(self):
         self.send_header("Access-Control-Allow-Origin", "*")
@@ -159,7 +159,9 @@ class Handler(SimpleHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self):
-        regenerate_match = re.fullmatch(r"/api/reports/([a-zA-Z0-9_.-]+)/regenerate", self.path)
+        regenerate_match = re.fullmatch(
+            r"/api/reports/([a-zA-Z0-9_.-]+)/regenerate", self.path
+        )
         if regenerate_match:
             report_id = regenerate_match.group(1)
 
@@ -207,7 +209,9 @@ class Handler(SimpleHTTPRequestHandler):
                 q["lastUpdated"] = now()
                 save_queue(q)
 
-            print(f"[+] Regeneration queued: {job['owner']}/{job['repo']} ({report_id})")
+            print(
+                f"[+] Regeneration queued: {job['owner']}/{job['repo']} ({report_id})"
+            )
             triggered = False
             worker_error = ""
             dispatch_code = ""
@@ -218,17 +222,13 @@ class Handler(SimpleHTTPRequestHandler):
                 max_inflight_jobs=MAX_ACTIVE_JOBS,
             ):
                 dispatch_code = "queued_for_later_inflight_limit"
-                worker_error = (
-                    "Queued for later processing: in-flight worker limit currently reached."
-                )
+                worker_error = "Queued for later processing: in-flight worker limit currently reached."
             else:
                 allowed, limit_code, limiter_retry_after = SUBMISSION_LIMITER.allow()
                 if not allowed:
                     dispatch_code = limit_code
                     retry_after = limiter_retry_after
-                    worker_error = (
-                        "Queued for later processing: dispatch temporarily deferred by submit limiter."
-                    )
+                    worker_error = "Queued for later processing: dispatch temporarily deferred by submit limiter."
                 else:
                     triggered, worker_error = trigger_worker_for_job(
                         root_dir=Path(ROOT_DIR),
@@ -334,9 +334,7 @@ class Handler(SimpleHTTPRequestHandler):
             if not allowed:
                 dispatch_code = limit_code
                 retry_after = limiter_retry_after
-                worker_error = (
-                    "Queued for later processing: dispatch temporarily deferred by submit limiter."
-                )
+                worker_error = "Queued for later processing: dispatch temporarily deferred by submit limiter."
             else:
                 triggered, worker_error = trigger_worker_for_job(
                     root_dir=Path(ROOT_DIR),
@@ -344,14 +342,18 @@ class Handler(SimpleHTTPRequestHandler):
                 )
                 if not triggered:
                     dispatch_code = "worker_trigger_failed"
-                    print(f"[!] Failed to auto-trigger worker for {job_id}: {worker_error}")
+                    print(
+                        f"[!] Failed to auto-trigger worker for {job_id}: {worker_error}"
+                    )
 
         if triggered:
             dispatch_code = "triggered"
         if not triggered and not worker_error:
             worker_error = "Queued for later processing."
         if not triggered:
-            print(f"[i] Job queued without immediate trigger: {job_id} ({worker_error})")
+            print(
+                f"[i] Job queued without immediate trigger: {job_id} ({worker_error})"
+            )
 
         self.respond(
             201,
