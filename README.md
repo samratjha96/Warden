@@ -6,6 +6,8 @@ Warden is an adversarial security review system for open source repositories. Su
 
 ![Warden queue page](docs/images/warden-queue.png)
 
+![Warden reports page](docs/images/warden-reports.png)
+
 ![Warden sample report page](docs/images/warden-report-current.png)
 
 ## What It Does
