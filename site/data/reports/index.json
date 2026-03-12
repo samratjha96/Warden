@@ -1,4 +1,16 @@
 {
-  "reports": [],
-  "lastUpdated": "2026-03-09T00:00:00Z"
+  "reports": [
+    {
+      "id": "openclaw-openclaw-65cc63bb",
+      "owner": "openclaw",
+      "repo": "openclaw",
+      "commit": "18f15850e6de4b2d9fc88f995614a25a3404abc1",
+      "analyzed": "2026-03-12",
+      "ecosystem": "Node.js/npm",
+      "risk": "medium",
+      "verdict": "conditional",
+      "keyFinding": "Legitimate AI assistant with LLM-driven shell execution, install-time daemon creation, misleading \"local-first\" claims (chat data sent to cloud APIs), and suspicious star growth (304K in <4 months)"
+    }
+  ],
+  "lastUpdated": "2026-03-12T05:16:11Z"
 }
