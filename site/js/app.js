@@ -242,6 +242,7 @@ var App = (function() {
 
         submit.onclick = function() {
             submit.disabled = true;
+            submit.textContent = 'Queuing…';
             requestReportRegeneration(report.id, steeringInput.value)
                 .then(function() {
                     closeRegenerationDialog();
@@ -249,17 +250,13 @@ var App = (function() {
                 })
                 .catch(function(err) {
                     if (err.code === 'duplicate_queue_entry') {
-                        alert(
-                            'REGENERATION ALREADY ACTIVE\n\n' +
-                            err.message + '\n\n' +
-                            'Open Queue to track or remove the active run before trying again.'
-                        );
+                        closeRegenerationDialog();
+                        window.location.href = 'queue.html';
                     } else {
                         alert('Regeneration failed: ' + err.message);
+                        submit.disabled = false;
+                        submit.textContent = 'Queue Regen';
                     }
-                })
-                .finally(function() {
-                    submit.disabled = false;
                 });
         };
     }
