@@ -538,6 +538,9 @@ async def run_analysis(job: dict) -> bool:
         )
         if repo_stats:
             captured_metadata.update(repo_stats)
+            print(f"  Fetched repo stats: {repo_stats.get('stars', 0)} stars, {repo_stats.get('forks', 0)} forks")
+        else:
+            print(f"  WARNING: Failed to fetch repo stats, stats will show as N/A")
         captured_metadata["hasSecurityMd"] = has_security_policy(clone_path)
 
         # Build and validate report
