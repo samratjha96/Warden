@@ -1,10 +1,15 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#     "python-dotenv>=1.0.0",
+# ]
+# ///
 """
 Warden Server
 
 Usage:
     uv run server.py [port]
-    python3 server.py [port]
 
 Serves static files from ./site and handles POST /api/submit
 """
@@ -20,6 +25,10 @@ from datetime import datetime, timezone
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 import fcntl
+
+# Load .env file from project root before accessing env vars
+from dotenv import load_dotenv
+load_dotenv(Path(__file__).parent / ".env")
 
 from queue_ops import enqueue_job, remove_job
 from regeneration import build_regeneration_job
@@ -210,7 +219,8 @@ class Handler(SimpleHTTPRequestHandler):
                 save_queue(q)
 
             print(
-                f"[+] Regeneration queued: {job['owner']}/{job['repo']} ({report_id})"
+                f"[+] Regeneration queued: {job['owner']}/{job['repo']} ({report_id})",
+                flush=True,
             )
             triggered = False
             worker_error = ""
@@ -237,7 +247,8 @@ class Handler(SimpleHTTPRequestHandler):
                     if not triggered:
                         dispatch_code = "worker_trigger_failed"
                         print(
-                            f"[!] Failed to auto-trigger worker for regeneration {report_id}: {worker_error}"
+                            f"[!] Failed to auto-trigger worker for regeneration {report_id}: {worker_error}",
+                            flush=True,
                         )
 
             if triggered:
@@ -315,7 +326,7 @@ class Handler(SimpleHTTPRequestHandler):
             q["lastUpdated"] = now()
             save_queue(q)
 
-        print(f"[+] Queued: {owner}/{repo} ({job_id})")
+        print(f"[+] Queued: {owner}/{repo} ({job_id})", flush=True)
         triggered = False
         worker_error = ""
         dispatch_code = ""
@@ -343,7 +354,8 @@ class Handler(SimpleHTTPRequestHandler):
                 if not triggered:
                     dispatch_code = "worker_trigger_failed"
                     print(
-                        f"[!] Failed to auto-trigger worker for {job_id}: {worker_error}"
+                        f"[!] Failed to auto-trigger worker for {job_id}: {worker_error}",
+                        flush=True,
                     )
 
         if triggered:
@@ -352,7 +364,8 @@ class Handler(SimpleHTTPRequestHandler):
             worker_error = "Queued for later processing."
         if not triggered:
             print(
-                f"[i] Job queued without immediate trigger: {job_id} ({worker_error})"
+                f"[i] Job queued without immediate trigger: {job_id} ({worker_error})",
+                flush=True,
             )
 
         self.respond(
@@ -433,5 +446,5 @@ class Handler(SimpleHTTPRequestHandler):
 
 if __name__ == "__main__":
     port = int(sys.argv[1]) if len(sys.argv) > 1 else PORT
-    print(f"http://localhost:{port}")
+    print(f"http://localhost:{port}", flush=True)
     HTTPServer(("", port), Handler).serve_forever()

@@ -52,6 +52,15 @@ There is no database. Queue and report state live in JSON files on disk.
 - Git
 - Access to the Claude Agent SDK runtime used by the worker
 
+### Configuration
+
+Copy the example environment file and add your NVIDIA API key:
+
+```bash
+cp .env.example .env
+# Edit .env and set NVIDIA_API_KEY
+```
+
 ### Start the app
 
 ```bash

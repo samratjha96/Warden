@@ -1,16 +1,49 @@
 {
   "reports": [
     {
-      "id": "openclaw-openclaw-65cc63bb",
-      "owner": "openclaw",
-      "repo": "openclaw",
-      "commit": "18f15850e6de4b2d9fc88f995614a25a3404abc1",
-      "analyzed": "2026-03-12",
-      "ecosystem": "Node.js/npm",
+      "id": "abhigyanpatwari-GitNexus-cb775b92",
+      "owner": "abhigyanpatwari",
+      "repo": "GitNexus",
+      "commit": "64b7ff006180381a1b23d770ee6fcdaf98c0e24f",
+      "analyzed": "2026-03-16",
+      "ecosystem": "Node.js/NPM",
       "risk": "medium",
       "verdict": "conditional",
-      "keyFinding": "Legitimate AI assistant with LLM-driven shell execution, install-time daemon creation, misleading \"local-first\" claims (chat data sent to cloud APIs), and suspicious star growth (304K in <4 months)"
+      "keyFinding": "High-quality local-first code analysis tool with 3 unpatched high-severity CVEs and trust-destroying postinstall script; requires dependency upgrades and install hygiene before enterprise deployment"
+    },
+    {
+      "id": "NemoClaw-nemoclaw-12d309a4",
+      "owner": "NemoClaw",
+      "repo": "nemoclaw",
+      "commit": "664821d099eedc9a278d6d21d109cc823e1315dd",
+      "analyzed": "2026-03-12",
+      "ecosystem": "Node.js/NPM, Rust/Solana",
+      "risk": "high",
+      "verdict": "reject",
+      "keyFinding": "Crypto/blockchain policy gate: Solana smart contracts with $NEMO token, USDC payments, and wallet integration for on-chain agent execution"
+    },
+    {
+      "id": "yusufkaraaslan-Skill_Seekers-a0155526",
+      "owner": "yusufkaraaslan",
+      "repo": "Skill_Seekers",
+      "commit": "0ca271cdcb5cc3f99da501c457eb4d9813b9cfc0",
+      "analyzed": "2026-03-12",
+      "ecosystem": "Python/PyPI",
+      "risk": "medium",
+      "verdict": "conditional",
+      "keyFinding": "Young repository (19 days old) with setup scripts that bypass pip safety checks; requires hash-pinned dependencies and API key protection before enterprise deployment"
+    },
+    {
+      "id": "openclaw-openclaw-88c44e1d",
+      "owner": "openclaw",
+      "repo": "openclaw",
+      "commit": "e6897c800bbf74d730d130ac0197a72cc9562e4d",
+      "analyzed": "2026-03-12",
+      "ecosystem": "Node.js/npm (pnpm)",
+      "risk": "medium",
+      "verdict": "conditional",
+      "keyFinding": "Powerful AI gateway with host shell execution and browser automation requires operator trust model; misconfiguration or untrusted input can lead to arbitrary command execution."
     }
   ],
-  "lastUpdated": "2026-03-12T05:16:11Z"
+  "lastUpdated": "2026-03-16T23:15:51Z"
 }

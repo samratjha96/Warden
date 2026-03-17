@@ -7,3 +7,4 @@ site/data/reports/*.lock
 site/data/reports/*.md
 site/data/reports/*.json
 !site/data/reports/index.json
+.env

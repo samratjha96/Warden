@@ -5,6 +5,7 @@
 #     "nvidia-nat>=1.4.0",
 #     "langchain-openai>=0.1.0",
 #     "anyio>=4.0.0",
+#     "python-dotenv>=1.0.0",
 # ]
 # ///
 """
@@ -32,6 +33,10 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 import fcntl
+
+# Load .env file from project root before accessing env vars
+from dotenv import load_dotenv
+load_dotenv(Path(__file__).parent.parent / ".env")
 
 import subprocess
 from langchain_openai import ChatOpenAI
@@ -61,7 +66,12 @@ WORKER_RUN_LOCK_FILE = SITE_DIR / "data" / "queue" / "worker.run.lock"
 # Model configuration
 MODEL = "aws/anthropic/bedrock-claude-sonnet-4-5-v1"
 BASE_URL = "https://inference-api.nvidia.com/v1"
-API_KEY = os.environ["NVIDIA_API_KEY"]
+API_KEY = os.environ.get("NVIDIA_API_KEY")
+if not API_KEY:
+    raise RuntimeError(
+        "NVIDIA_API_KEY not set. Create a .env file in the project root "
+        "(see .env.example) or export the variable."
+    )
 
 
 def now():
