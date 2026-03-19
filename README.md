@@ -64,7 +64,7 @@ cp .env.example .env
 ### Start the app
 
 ```bash
-uv run server.py 8080
+uv run server.py
 ```
 
 In a second terminal:
@@ -76,7 +76,7 @@ uv run worker/worker.py --watch
 Then open:
 
 ```text
-http://localhost:8080
+http://localhost:12000
 ```
 
 ### One-off worker runs
