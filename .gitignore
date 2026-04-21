@@ -2,9 +2,5 @@
 *.log
 __pycache__/
 *.py[cod]
-site/data/queue/*.lock
-site/data/reports/*.lock
-site/data/reports/*.md
-site/data/reports/*.json
-!site/data/reports/index.json
+site/data/
 .env
