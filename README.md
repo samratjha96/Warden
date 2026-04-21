@@ -50,7 +50,18 @@ There is no database. Queue and report state live in JSON files on disk.
 - Python 3.11+
 - [`uv`](https://github.com/astral-sh/uv)
 - Git
-- Access to the Claude Agent SDK runtime used by the worker
+- Access to an LLM gateway compatible with the worker
+- `WARDEN_MODEL`, `OPENAI_COMPATIBLE_ENDPOINT`, and `NVIDIA_API_KEY` exported in your shell
+
+The worker talks to an OpenAI-compatible chat completions API via LangChain. `OPENAI_COMPATIBLE_ENDPOINT` can point to any service that supports the OpenAI chat completions format, not just one specific vendor.
+
+Example:
+
+```bash
+export WARDEN_MODEL="your-model-name"
+export OPENAI_COMPATIBLE_ENDPOINT="https://your-endpoint.example/v1"
+export NVIDIA_API_KEY="your-api-key"
+```
 
 ### Configuration
 

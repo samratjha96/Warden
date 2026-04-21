@@ -143,16 +143,41 @@
 
     <script src="js/app.js"></script>
     <script>
-        
-        document.getElementById('submit-form').addEventListener('submit', function(e) {
+        var submitForm = document.getElementById('submit-form');
+        var submitButton = document.getElementById('submit-btn');
+        var repoUrlInput = document.getElementById('repo-url');
+        var submitControls = submitForm.querySelectorAll('input, select, button');
+
+        function setSubmitPendingState(isPending) {
+            submitControls.forEach(function(control) {
+                control.disabled = isPending;
+            });
+            submitButton.disabled = isPending;
+            submitButton.textContent = isPending ? 'Queuing…' : 'Analyze';
+        }
+
+        submitForm.addEventListener('submit', function(e) {
             e.preventDefault();
-            var url = document.getElementById('repo-url').value.trim();
-            if (url) {
-                App.submitJob(url, {
-                    ecosystem: document.getElementById('ecosystem').value,
-                    severity: document.getElementById('severity').value,
-                    depth: document.getElementById('depth').value
-                });
+            var url = repoUrlInput.value.trim();
+            if (!url) {
+                return;
+            }
+
+            setSubmitPendingState(true);
+
+            try {
+                sessionStorage.setItem('wardenPendingSubmission', JSON.stringify({
+                    url: url,
+                    options: {
+                        ecosystem: document.getElementById('ecosystem').value,
+                        severity: document.getElementById('severity').value,
+                        depth: document.getElementById('depth').value
+                    }
+                }));
+                window.location.href = 'queue.html';
+            } catch (err) {
+                setSubmitPendingState(false);
+                alert('Unable to queue submission: ' + err.message);
             }
         });
         
