@@ -28,7 +28,7 @@ import subprocess
 from langchain_openai import ChatOpenAI
 from langchain_core.tools import tool
 from langchain_core.messages import HumanMessage, SystemMessage
-from langgraph.prebuilt import create_react_agent
+from langchain.agents import create_agent
 from report_contract import build_report, normalize_metadata, validate_markdown_report
 
 # Paths
@@ -484,7 +484,7 @@ async def run_analysis(job: dict) -> bool:
         )
 
         # Create LangGraph react agent
-        agent = create_react_agent(llm, TOOLS, prompt=system_prompt)
+        agent = create_agent(llm, TOOLS, prompt=system_prompt)
 
         # Run the agent
         start_time = time.time()
