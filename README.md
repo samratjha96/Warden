@@ -65,11 +65,12 @@ export NVIDIA_API_KEY="your-api-key"
 
 ### Configuration
 
-Copy the example environment file and add your NVIDIA API key:
+Create a `.env` file and set your runtime values:
 
-```bash
-cp .env.example .env
-# Edit .env and set NVIDIA_API_KEY
+```dotenv
+WARDEN_MODEL=your-model-name
+OPENAI_COMPATIBLE_ENDPOINT=https://your-endpoint.example/v1
+NVIDIA_API_KEY=your-api-key
 ```
 
 ### Start the app
@@ -102,6 +103,36 @@ Process a single job and then continue draining backlog:
 
 ```bash
 uv run worker/worker.py --job <job-id>
+```
+
+## Docker
+
+Create a `.env` file with:
+
+```dotenv
+WARDEN_MODEL=your-model-name
+OPENAI_COMPATIBLE_ENDPOINT=https://your-endpoint.example/v1
+NVIDIA_API_KEY=your-api-key
+```
+
+`OPENAI_COMPATIBLE_ENDPOINT` can be any endpoint that supports the OpenAI chat completions format.
+
+Start the app:
+
+```bash
+docker compose up --build -d
+```
+
+Open:
+
+```text
+http://localhost:12000
+```
+
+Stop it:
+
+```bash
+docker compose down
 ```
 
 ## Typical Flow

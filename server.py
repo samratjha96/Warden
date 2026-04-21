@@ -1,10 +1,3 @@
-#!/usr/bin/env -S uv run --script
-# /// script
-# requires-python = ">=3.11"
-# dependencies = [
-#     "python-dotenv>=1.0.0",
-# ]
-# ///
 """
 Warden Server
 
@@ -167,6 +160,12 @@ class Handler(SimpleHTTPRequestHandler):
     def do_OPTIONS(self):
         self.send_response(200)
         self.end_headers()
+
+    def do_GET(self):
+        if self.path == "/api/healthz":
+            return self.respond(200, {"ok": True})
+
+        return super().do_GET()
 
     def do_POST(self):
         regenerate_match = re.fullmatch(
