@@ -1,13 +1,3 @@
-#!/usr/bin/env -S uv run --script
-# /// script
-# requires-python = ">=3.11"
-# dependencies = [
-#     "nvidia-nat>=1.4.0",
-#     "langchain-openai>=0.1.0",
-#     "anyio>=4.0.0",
-#     "python-dotenv>=1.0.0",
-# ]
-# ///
 """
 Warden Worker
 
@@ -402,15 +392,12 @@ def get_provider_from_job(job: dict[str, Any]) -> str:
     return "github"
 
 
-def build_stats_instructions(provider: str, owner: str, repo: str) -> str:
-    if provider == "gitlab":
-        return f"""Use GitLab APIs:
-- Project metadata: `curl -s "https://gitlab.com/api/v4/projects/{owner}%2F{repo}" | jq '{{stars: .star_count, forks: .forks_count, open_issues: .open_issues_count, created: .created_at, license: .license.name}}'`
-- Contributors count: `curl -s "https://gitlab.com/api/v4/projects/{owner}%2F{repo}/repository/contributors" | jq length`"""
-
-    return f"""Use GitHub APIs:
-- Repo metadata: `curl -s "https://api.github.com/repos/{owner}/{repo}" | jq '{{stars: .stargazers_count, forks: .forks_count, open_issues: .open_issues_count, created: .created_at, license: .license.spdx_id}}'`
-- Contributors count: `curl -s "https://api.github.com/repos/{owner}/{repo}/contributors?per_page=100" | jq length`"""
+def build_stats_instructions() -> str:
+    return (
+        "Repository trust stats are captured automatically after analysis. "
+        "Do not spend tool budget on external metadata fetches unless they are required "
+        "to confirm a security finding."
+    )
 
 
 def build_steering_reminder(job: dict[str, Any]) -> str:
@@ -434,7 +421,7 @@ def build_analysis_prompt(
     template = PROMPT_FILE.read_text()
     options = job.get("options", {})
     provider = get_provider_from_job(job)
-    stats_instructions = build_stats_instructions(provider, job["owner"], job["repo"])
+    stats_instructions = build_stats_instructions()
     prompt = template.format(
         url=job["url"],
         provider=provider,

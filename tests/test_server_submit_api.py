@@ -29,6 +29,26 @@ class ServerSubmitApiTests(unittest.TestCase):
         conn.close()
         return response.status, payload
 
+    def get_json(self, port: int, path: str) -> tuple[int, dict]:
+        conn = HTTPConnection("127.0.0.1", port, timeout=5)
+        conn.request("GET", path)
+        response = conn.getresponse()
+        payload = json.loads(response.read().decode("utf-8"))
+        conn.close()
+        return response.status, payload
+
+    def test_health_endpoint_reports_ok(self):
+        httpd, thread = self.start_server()
+        try:
+            status, payload = self.get_json(httpd.server_port, "/api/healthz")
+        finally:
+            httpd.shutdown()
+            httpd.server_close()
+            thread.join(timeout=5)
+
+        self.assertEqual(status, 200)
+        self.assertEqual(payload, {"ok": True})
+
     def test_submit_enqueues_job_and_triggers_worker(self):
         with TemporaryDirectory() as tmp:
             queue_file = Path(tmp) / "jobs.json"

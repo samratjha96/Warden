@@ -1,0 +1,15 @@
+.git
+.gitignore
+.env
+__pycache__/
+.pytest_cache/
+.venv/
+AGENTS.md
+docs/
+mockups/
+tests/
+site/data/reports/*.md
+site/data/reports/*.json
+site/data/queue/*.json
+site/data/queue/*.lock
+*.log
