@@ -27,8 +27,8 @@ import fcntl
 import subprocess
 from langchain_openai import ChatOpenAI
 from langchain_core.tools import tool
-from langchain_core.messages import HumanMessage
-from nat.agent.tool_calling_agent.agent import ToolCallAgentGraph
+from langchain_core.messages import HumanMessage, SystemMessage
+from langgraph.prebuilt import create_react_agent
 from report_contract import build_report, normalize_metadata, validate_markdown_report
 
 # Paths
@@ -483,11 +483,8 @@ async def run_analysis(job: dict) -> bool:
             api_key=WORKER_CONFIG.api_key,
         )
 
-        # Create NAT agent
-        agent_builder = ToolCallAgentGraph(
-            llm=llm, tools=TOOLS, prompt=system_prompt, detailed_logs=True
-        )
-        agent = await agent_builder.build_graph()
+        # Create LangGraph react agent
+        agent = create_react_agent(llm, TOOLS, prompt=system_prompt)
 
         # Run the agent
         start_time = time.time()
