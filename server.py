@@ -22,20 +22,20 @@ import sys
 import tempfile
 from contextlib import contextmanager
 from datetime import datetime, timezone
-from http.server import HTTPServer, SimpleHTTPRequestHandler
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import fcntl
 
-# Load .env file from project root before accessing env vars
-from dotenv import load_dotenv
-load_dotenv(Path(__file__).parent / ".env")
-
+from env_bootstrap import load_project_dotenv
 from queue_ops import enqueue_job, remove_job
 from regeneration import build_regeneration_job
 from report_ops import delete_report_files, remove_report
 from repo_url import parse_repo_url
 from submission_limits import SubmissionLimiter
 from worker_trigger import trigger_worker_for_job
+
+# Load .env file from project root before accessing env vars when python-dotenv is available.
+load_project_dotenv(Path(__file__).parent / ".env")
 
 PORT = int(os.environ.get("PORT", 12000))
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -56,6 +56,7 @@ SUBMISSION_LIMITER = SubmissionLimiter(
     window_seconds=SUBMIT_WINDOW_SECONDS,
     max_submissions_per_window=SUBMIT_MAX_PER_WINDOW,
 )
+HTTP_SERVER_CLASS = ThreadingHTTPServer
 
 
 def now():
@@ -447,4 +448,4 @@ class Handler(SimpleHTTPRequestHandler):
 if __name__ == "__main__":
     port = int(sys.argv[1]) if len(sys.argv) > 1 else PORT
     print(f"http://localhost:{port}", flush=True)
-    HTTPServer(("", port), Handler).serve_forever()
+    HTTP_SERVER_CLASS(("", port), Handler).serve_forever()

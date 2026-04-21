@@ -118,24 +118,6 @@ var App = (function() {
         })
         .then(function(r) {
             return parseApiResponse(r);
-        })
-        .then(function(data) {
-            if (data.job) {
-                window.location.href = 'queue.html';
-            } else {
-                alert(data.error || 'Submission failed');
-            }
-        })
-        .catch(function(err) {
-            if (err.code === 'duplicate_queue_entry') {
-                alert(
-                    'MISSION ALREADY ACTIVE\n\n' +
-                    err.message + '\n\n' +
-                    'Open Queue to track or remove the existing entry before re-submitting.'
-                );
-                return;
-            }
-            alert('Error: ' + err.message);
         });
     }
 

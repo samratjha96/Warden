@@ -11,7 +11,7 @@
 """
 Warden Worker
 
-Runs deep security analysis using NVIDIA NAT (NeMo Agent Toolkit) + Nemotron 3.
+Runs deep security analysis using the configured LLM runtime.
 The agent writes a markdown report AND calls write_metadata for structured sidebar data.
 
 Usage:
@@ -34,10 +34,6 @@ from typing import Any
 from urllib.parse import urlparse
 import fcntl
 
-# Load .env file from project root before accessing env vars
-from dotenv import load_dotenv
-load_dotenv(Path(__file__).parent.parent / ".env")
-
 import subprocess
 from langchain_openai import ChatOpenAI
 from langchain_core.tools import tool
@@ -50,8 +46,13 @@ SCRIPT_DIR = Path(__file__).parent.absolute()
 ROOT_DIR = SCRIPT_DIR.parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
+from env_bootstrap import load_project_dotenv
 from repo_stats import fetch_repo_stats
 from queue_drain import run_target_then_drain
+from worker_config import load_worker_config
+
+# Load .env file from project root before accessing env vars when python-dotenv is available.
+load_project_dotenv(ROOT_DIR / ".env")
 
 SITE_DIR = ROOT_DIR / "site"
 QUEUE_FILE = SITE_DIR / "data" / "queue" / "jobs.json"
@@ -64,14 +65,7 @@ CLONE_BASE = Path(os.environ.get("TMPDIR", "/tmp")) / "oss-warden-analysis"
 WORKER_RUN_LOCK_FILE = SITE_DIR / "data" / "queue" / "worker.run.lock"
 
 # Model configuration
-MODEL = "aws/anthropic/bedrock-claude-sonnet-4-5-v1"
-BASE_URL = "https://inference-api.nvidia.com/v1"
-API_KEY = os.environ.get("NVIDIA_API_KEY")
-if not API_KEY:
-    raise RuntimeError(
-        "NVIDIA_API_KEY not set. Create a .env file in the project root "
-        "(see .env.example) or export the variable."
-    )
+WORKER_CONFIG = load_worker_config()
 
 
 def now():
@@ -495,8 +489,12 @@ async def run_analysis(job: dict) -> bool:
     )
 
     try:
-        # Create LLM client pointing to NVIDIA gateway
-        llm = ChatOpenAI(model=MODEL, base_url=BASE_URL, api_key=API_KEY)
+        # Create LLM client using the configured gateway
+        llm = ChatOpenAI(
+            model=WORKER_CONFIG.model,
+            base_url=WORKER_CONFIG.base_url,
+            api_key=WORKER_CONFIG.api_key,
+        )
 
         # Create NAT agent
         agent_builder = ToolCallAgentGraph(

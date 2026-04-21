@@ -42,6 +42,8 @@
             <div class="page-count" id="queue-count">Loading...</div>
         </div>
 
+        <div id="queue-submit-status" class="empty-state" style="display:none;margin-bottom:24px;"></div>
+
         <div id="queue-container">
             <div class="loading-skeleton" style="height:200px;"></div>
         </div>
@@ -50,7 +52,25 @@
 
     <script src="js/app.js"></script>
     <script>
-        
+        function setSubmissionStatus(title, message, tone) {
+            var el = document.getElementById('queue-submit-status');
+            if (!title && !message) {
+                el.style.display = 'none';
+                el.innerHTML = '';
+                return;
+            }
+
+            var color = 'var(--ink)';
+            if (tone === 'success') color = 'var(--green)';
+            if (tone === 'warn') color = 'var(--amber)';
+            if (tone === 'error') color = 'var(--red)';
+
+            el.style.display = 'block';
+            el.innerHTML =
+                '<div class="empty-state-title" style="color:' + color + ';">' + App.escapeHtml(title) + '</div>' +
+                '<div class="empty-state-desc">' + App.escapeHtml(message) + '</div>';
+        }
+
         function loadQueue() {
             App.fetchJSONFresh('data/queue/jobs.json')
                 .then(function(data) {
@@ -60,9 +80,52 @@
                 })
                 .catch(function() {
                     document.getElementById('queue-count').textContent = '0 jobs in queue';
-                    document.getElementById('queue-container').innerHTML = 
+                    document.getElementById('queue-container').innerHTML =
                         '<div class="empty-state"><div class="empty-state-title">Queue Empty</div>' +
                         '<div class="empty-state-desc">No pending analyses</div></div>';
+                });
+        }
+
+        function resumePendingSubmission() {
+            var raw = sessionStorage.getItem('wardenPendingSubmission');
+            if (!raw) {
+                return Promise.resolve(false);
+            }
+
+            var pending;
+            try {
+                pending = JSON.parse(raw);
+            } catch (err) {
+                sessionStorage.removeItem('wardenPendingSubmission');
+                setSubmissionStatus('Submit Failed', 'Saved submission data was invalid. Return to Submit and try again.', 'error');
+                return Promise.resolve(false);
+            }
+
+            setSubmissionStatus('Queueing Analysis', pending.url);
+
+            return App.submitJob(pending.url, pending.options)
+                .then(function(data) {
+                    sessionStorage.removeItem('wardenPendingSubmission');
+                    if (data.job) {
+                        setSubmissionStatus(
+                            'Analysis Queued',
+                            data.job.owner + ' / ' + data.job.repo + ' is now in the queue.',
+                            'success'
+                        );
+                    } else {
+                        setSubmissionStatus('Submit Failed', 'Server returned an invalid queue response.', 'error');
+                    }
+                    return true;
+                })
+                .catch(function(err) {
+                    sessionStorage.removeItem('wardenPendingSubmission');
+                    if (err.code === 'duplicate_queue_entry') {
+                        setSubmissionStatus('Mission Already Active', err.message, 'warn');
+                        return true;
+                    }
+
+                    setSubmissionStatus('Submit Failed', err.message, 'error');
+                    return false;
                 });
         }
 
@@ -75,10 +138,11 @@
                     alert('Remove failed: ' + err.message);
                 });
         };
-        
-        loadQueue();
-        // Refresh every 5 seconds
-        setInterval(loadQueue, 5000);
+
+        resumePendingSubmission().finally(function() {
+            loadQueue();
+            setInterval(loadQueue, 5000);
+        });
     </script>
 </body>
 </html>
