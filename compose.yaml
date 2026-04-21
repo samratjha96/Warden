@@ -3,6 +3,7 @@ services:
     build:
       context: .
     command: ["server"]
+    user: "${UID:-1000}:${GID:-1000}"
     init: true
     read_only: true
     restart: unless-stopped
@@ -23,15 +24,15 @@ services:
     ports:
       - "12000:12000"
     tmpfs:
-      - /tmp
-      - /home/warden
+      - /tmp:uid=${UID:-1000},gid=${GID:-1000}
     volumes:
-      - warden-data:/app/site/data
+      - ./site/data:/app/site/data
 
   worker:
     build:
       context: .
     command: ["worker"]
+    user: "${UID:-1000}:${GID:-1000}"
     init: true
     read_only: true
     restart: unless-stopped
@@ -41,10 +42,6 @@ services:
       - path: .env
         required: false
     tmpfs:
-      - /tmp
-      - /home/warden
+      - /tmp:uid=${UID:-1000},gid=${GID:-1000}
     volumes:
-      - warden-data:/app/site/data
-
-volumes:
-  warden-data:
+      - ./site/data:/app/site/data
