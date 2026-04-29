@@ -1,6 +1,6 @@
 # Warden
 
-Warden is an adversarial security review system for open source repositories. Submit a GitHub or GitLab repo, queue an analysis job, and get back a security report with a verdict, approval conditions, evidence, and repo trust metadata.
+Warden is an adversarial security review system for any repository. Submit a GitHub or GitLab repo, queue an analysis job, and get back a security report with a verdict, approval conditions, evidence, and repo trust metadata.
 
 ![Warden home page](docs/images/warden-home.png)
 
@@ -218,4 +218,4 @@ Existing reports can be regenerated from the UI.
 
 ## Current Scope
 
-Warden is built for repository review, not runtime sandboxing or malware detonation. It is strongest as a review gate for open source intake, internal security triage, and follow-up analysis on suspicious repos.
+Warden is built for repository review, not runtime sandboxing or malware detonation. It is strongest as a review gate for repo intake, internal security triage, and follow-up analysis on suspicious repos.
