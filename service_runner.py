@@ -15,6 +15,14 @@ def build_service_command(service: str, extra_args: Sequence[str]) -> list[str]:
         worker_args = list(extra_args) if extra_args else ["--watch"]
         return [python, "worker/worker.py", *worker_args]
 
+    if service == "trending":
+        trending_args = (
+            list(extra_args)
+            if extra_args
+            else ["--watch", "--interval-hours", "24", "--no-trigger-worker"]
+        )
+        return [python, "github_trending.py", *trending_args]
+
     raise ValueError(f"Unsupported service: {service}")
 
 

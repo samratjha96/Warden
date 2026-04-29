@@ -45,3 +45,24 @@ services:
       - /tmp:uid=${UID:-1000},gid=${GID:-1000}
     volumes:
       - ./site/data:/app/site/data
+
+  trending:
+    build:
+      context: .
+    command: ["trending"]
+    user: "${UID:-1000}:${GID:-1000}"
+    init: true
+    read_only: true
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      TRENDING_MAX_REPOS: "${TRENDING_MAX_REPOS:-10}"
+      TRENDING_DEDUPE_DAYS: "${TRENDING_DEDUPE_DAYS:-30}"
+    tmpfs:
+      - /tmp:uid=${UID:-1000},gid=${GID:-1000}
+    volumes:
+      - ./site/data:/app/site/data

@@ -105,6 +105,29 @@ Process a single job and then continue draining backlog:
 uv run worker/worker.py --job <job-id>
 ```
 
+## GitHub Trending Intake
+
+Queue the current GitHub Trending repositories:
+
+```bash
+uv run github_trending.py
+```
+
+Run it as a lightweight daily scheduler:
+
+```bash
+uv run github_trending.py --watch --interval-hours 24
+```
+
+Useful options:
+
+```bash
+uv run github_trending.py --max-repos 10 --dedupe-days 30
+uv run github_trending.py --no-trigger-worker
+```
+
+The Docker deployment includes a `trending` service that runs this intake loop every 24 hours and writes to the same queue volume as the `worker` service. The importer fetches the GitHub Trending HTML page once per run with browser-like headers instead of calling the GitHub API repeatedly. It skips repositories that are already active in the queue and repositories with a completed report inside the dedupe window, which defaults to 30 days. If GitHub rate-limits or rejects the fetch, the run exits cleanly without mutating the queue.
+
 ## Docker
 
 Create a `.env` file with:
@@ -122,6 +145,8 @@ Start the app:
 ```bash
 docker compose up --build -d
 ```
+
+This starts the web server, the queue-draining worker, and the daily GitHub Trending intake service.
 
 Open:
 

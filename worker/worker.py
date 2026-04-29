@@ -484,7 +484,7 @@ async def run_analysis(job: dict) -> bool:
         )
 
         # Create LangGraph react agent
-        agent = create_agent(llm, TOOLS, prompt=system_prompt)
+        agent = create_agent(llm, TOOLS, system_prompt=system_prompt)
 
         # Run the agent
         start_time = time.time()
