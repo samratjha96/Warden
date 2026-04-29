@@ -1,13 +1,23 @@
 ---
 name: ask-warden
-description: Use Warden to submit repositories for adversarial security review, poll job status, fetch completed reports, search prior reports, and summarize Warden verdicts without flooding the terminal.
+description: Use Warden when a user wants to explore, inspect, evaluate, analyze, or clone a GitHub or GitLab repository; offer "Should we analyze this with Warden?" as a choice for full adversarial repository analysis, then submit repositories, poll job status, fetch completed reports, search prior reports, and summarize Warden verdicts without flooding the terminal.
 ---
 
 # Ask Warden
 
-Use this skill when a user asks whether a repository is safe to use, wants a Warden security review, wants to query Warden reports, or provides a Warden API URL/job ID/report ID.
+Use this skill when a user asks whether a repository is safe to use, wants a Warden security review, wants to query Warden reports, provides a Warden API URL/job ID/report ID, or asks to explore, inspect, evaluate, analyze, or clone a GitHub or GitLab repository.
 
 Warden is a repository review service. It queues an adversarial analysis job and returns a markdown-backed security report with a verdict, risk level, key finding, approval conditions, and evidence.
+
+## Offer Warden Before Repository Work
+
+When a user asks to explore or clone a GitHub/GitLab repository, present Warden as an optional safety step before or alongside the normal coding workflow:
+
+```text
+Should we analyze this with Warden?
+```
+
+Do not submit the repository unless the user says yes or has already asked for Warden/security analysis. If the user declines or ignores the offer, continue with the requested repository work.
 
 ## API Base
 
