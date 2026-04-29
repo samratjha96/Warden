@@ -146,6 +146,50 @@ docker compose down
    - an index entry for the reports table
 5. The report page renders the markdown report with verdict, risk, trust signals, and approval conditions
 
+## REST API
+
+The web UI uses the same runtime state exposed by the API. Agent callers only need one stable ID: the `jobId` returned by submit. That ID is also the completed report ID.
+
+Submit a repository:
+
+```bash
+curl -s http://localhost:12000/api/submit \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "url": "https://github.com/openai/openai-python",
+    "ecosystem": "auto",
+    "severity": "low",
+    "depth": "shallow"
+  }'
+```
+
+The response includes `jobId`, `statusUrl`, `reportUrl`, and `links`.
+
+Poll job status:
+
+```bash
+curl -s http://localhost:12000/api/jobs/<job-id>
+```
+
+Status is `pending`, `processing`, `failed`, or `succeeded`. When a worker completes a job, Warden removes it from the queue and `/api/jobs/<job-id>` returns `succeeded` by resolving the completed report.
+
+Get a completed report:
+
+```bash
+curl -s http://localhost:12000/api/reports/<report-id> -o warden-report.json
+```
+
+Reports include full markdown content and can be long. Write them to a file first, then inspect with `jq`, an editor, or a pager.
+
+Search reports for a repository:
+
+```bash
+curl -s 'http://localhost:12000/api/reports?provider=github&owner=openai&repo=openai-python' -o warden-report-search.json
+curl -s 'http://localhost:12000/api/reports?repository=openai/openai-python' -o warden-report-search.json
+```
+
+Search responses are smaller than full reports, but writing them to a file keeps terminal output predictable.
+
 ## Output
 
 Each analysis produces:

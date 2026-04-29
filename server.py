@@ -17,6 +17,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 import fcntl
 
 from env_bootstrap import load_project_dotenv
@@ -50,6 +51,7 @@ SUBMISSION_LIMITER = SubmissionLimiter(
     max_submissions_per_window=SUBMIT_MAX_PER_WINDOW,
 )
 HTTP_SERVER_CLASS = ThreadingHTTPServer
+API_ID_PATTERN = r"[a-zA-Z0-9_.-]+"
 
 
 def now():
@@ -114,6 +116,68 @@ def should_trigger_worker(*, inflight_jobs: int, max_inflight_jobs: int) -> bool
     return inflight_jobs < max_inflight_jobs
 
 
+def api_links(job_id: str):
+    return {
+        "self": f"/api/jobs/{job_id}",
+        "report": f"/api/reports/{job_id}",
+    }
+
+
+def repository_payload(source: dict):
+    return {
+        "provider": source.get("provider", "github"),
+        "owner": source.get("owner", ""),
+        "repo": source.get("repo", ""),
+        "url": source.get("url", ""),
+    }
+
+
+def job_status_payload(job: dict):
+    job_id = job["id"]
+    payload = {
+        "jobId": job_id,
+        "status": job.get("status", "unknown"),
+        "submittedAt": job.get("submitted", ""),
+        "repository": repository_payload(job),
+        "options": job.get("options", {}),
+        "links": api_links(job_id),
+    }
+    if job.get("error"):
+        payload["error"] = job["error"]
+    return payload
+
+
+def completed_job_payload(report: dict):
+    report_id = report["id"]
+    return {
+        "jobId": report_id,
+        "status": "succeeded",
+        "reportId": report_id,
+        "completedAt": report.get("analyzed", ""),
+        "repository": repository_payload(report),
+        "links": api_links(report_id),
+    }
+
+
+def report_matches_query(report: dict, query: dict[str, list[str]]) -> bool:
+    repository = query.get("repository", [""])[0].strip().lower()
+    if repository:
+        owner, _, repo = repository.partition("/")
+        if not repo:
+            return False
+        if report.get("owner", "").lower() != owner:
+            return False
+        if report.get("repo", "").lower() != repo:
+            return False
+
+    for key in ("provider", "owner", "repo"):
+        value = query.get(key, [""])[0].strip().lower()
+        if value and report.get(key, "").lower() != value:
+            return False
+
+    return True
+
+
 @contextmanager
 def queue_lock():
     os.makedirs(os.path.dirname(QUEUE_LOCK_FILE), exist_ok=True)
@@ -162,8 +226,64 @@ class Handler(SimpleHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        if self.path == "/api/healthz":
+        parsed = urlparse(self.path)
+        path = parsed.path
+
+        if path == "/api/healthz":
             return self.respond(200, {"ok": True})
+
+        job_match = re.fullmatch(f"/api/jobs/({API_ID_PATTERN})", path)
+        if job_match:
+            job_id = job_match.group(1)
+            with queue_lock():
+                queue = load_queue()
+                job = next(
+                    (job for job in queue.get("jobs", []) if job.get("id") == job_id),
+                    None,
+                )
+            if job:
+                return self.respond(200, job_status_payload(job))
+
+            report = load_report_by_id(job_id)
+            if isinstance(report, dict):
+                return self.respond(200, completed_job_payload(report))
+
+            return self.respond(404, {"error": "Job not found", "jobId": job_id})
+
+        if path == "/api/reports":
+            query = parse_qs(parsed.query)
+            with reports_lock():
+                index = load_reports_index()
+            reports = [
+                report
+                for report in index.get("reports", [])
+                if report_matches_query(report, query)
+            ]
+            return self.respond(
+                200,
+                {
+                    "reports": reports,
+                    "count": len(reports),
+                    "links": {"self": self.path},
+                },
+            )
+
+        report_match = re.fullmatch(f"/api/reports/({API_ID_PATTERN})", path)
+        if report_match:
+            report_id = report_match.group(1)
+            report = load_report_by_id(report_id)
+            if not isinstance(report, dict):
+                return self.respond(
+                    404,
+                    {"error": "Report not found", "reportId": report_id},
+                )
+            return self.respond(
+                200,
+                {
+                    "report": report,
+                    "links": {"self": f"/api/reports/{report_id}"},
+                },
+            )
 
         return super().do_GET()
 
@@ -260,6 +380,10 @@ class Handler(SimpleHTTPRequestHandler):
                 201,
                 {
                     "job": job,
+                    "jobId": job["id"],
+                    "statusUrl": f"/api/jobs/{job['id']}",
+                    "reportUrl": f"/api/reports/{job['id']}",
+                    "links": api_links(job["id"]),
                     "autoWorkerTriggered": triggered,
                     "workerError": worker_error,
                     "queuedForLater": not triggered,
@@ -372,6 +496,10 @@ class Handler(SimpleHTTPRequestHandler):
             201,
             {
                 "job": job,
+                "jobId": job["id"],
+                "statusUrl": f"/api/jobs/{job['id']}",
+                "reportUrl": f"/api/reports/{job['id']}",
+                "links": api_links(job["id"]),
                 "autoWorkerTriggered": triggered,
                 "workerError": worker_error,
                 "queuedForLater": not triggered,
