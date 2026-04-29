@@ -1,6 +1,6 @@
 ---
 name: ask-warden
-description: Use Warden when a user wants to explore, inspect, evaluate, analyze, or clone a GitHub or GitLab repository; offer "Should we analyze this with Warden?" as a choice for full adversarial repository analysis, then submit repositories, poll job status, fetch completed reports, search prior reports, and summarize Warden verdicts without flooding the terminal.
+description: Use Warden when a user wants to explore, inspect, evaluate, analyze, or clone a GitHub or GitLab repository; first search Warden for an existing report and flag any verdict, risk, key finding, or approval conditions, then offer "Should we analyze this with Warden?" only when no prior report exists. Also use Warden to submit repositories, poll job status, fetch completed reports, search prior reports, and summarize Warden verdicts without flooding the terminal.
 ---
 
 # Ask Warden
@@ -9,9 +9,23 @@ Use this skill when a user asks whether a repository is safe to use, wants a War
 
 Warden is a repository review service. It queues an adversarial analysis job and returns a markdown-backed security report with a verdict, risk level, key finding, approval conditions, and evidence.
 
-## Offer Warden Before Repository Work
+## Check Warden Before Repository Work
 
-When a user asks to explore or clone a GitHub/GitLab repository, present Warden as an optional safety step before or alongside the normal coding workflow:
+When a user asks to explore or clone a GitHub/GitLab repository, check Warden for an existing report before starting the normal coding workflow:
+
+```bash
+curl -s "$WARDEN_URL/api/reports?repository=owner/repo" -o warden-report-search.json
+```
+
+Do not dump the full response. Inspect the summary fields:
+
+```bash
+jq '.reports[] | {id, owner, repo, verdict, risk, keyFinding, approvalConditions, reportUrl}' warden-report-search.json
+```
+
+If a report exists, tell the user Warden has already analyzed the repository and flag the verdict, risk, key finding, and approval conditions. If the verdict is `conditional` or `reject`, call that out before continuing repository work.
+
+If no prior report exists, present Warden as an optional safety step:
 
 ```text
 Should we analyze this with Warden?
