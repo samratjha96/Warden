@@ -11,6 +11,7 @@ import json
 import os
 import hashlib
 import re
+import secrets
 import sys
 import tempfile
 from contextlib import contextmanager
@@ -40,6 +41,9 @@ REPORTS_DIR = os.path.join(SITE_DIR, "data", "reports")
 REPORTS_INDEX_FILE = os.path.join(REPORTS_DIR, "index.json")
 REPORTS_LOCK_FILE = REPORTS_INDEX_FILE + ".lock"
 MAX_ACTIVE_JOBS = int(os.environ.get("MAX_ACTIVE_JOBS", "1"))
+WARDEN_API_TOKEN = os.environ.get("WARDEN_API_TOKEN", "").strip()
+WARDEN_CORS_ORIGIN = os.environ.get("WARDEN_CORS_ORIGIN", "").strip()
+MAX_STEERING_BYTES = int(os.environ.get("MAX_STEERING_BYTES", "2000"))
 SUBMIT_MIN_INTERVAL_SECONDS = float(
     os.environ.get("SUBMIT_MIN_INTERVAL_SECONDS", "1.0")
 )
@@ -52,6 +56,26 @@ SUBMISSION_LIMITER = SubmissionLimiter(
 )
 HTTP_SERVER_CLASS = ThreadingHTTPServer
 API_ID_PATTERN = r"[a-zA-Z0-9_.-]+"
+
+
+def parse_basic_token(value: str) -> str:
+    import base64
+
+    prefix = "Basic "
+    if not value.startswith(prefix):
+        return ""
+    try:
+        decoded = base64.b64decode(value[len(prefix) :], validate=True).decode("utf-8")
+    except Exception:
+        return ""
+    _, sep, password = decoded.partition(":")
+    return password if sep else ""
+
+
+def token_from_authorization(value: str) -> str:
+    if value.startswith("Bearer "):
+        return value[len("Bearer ") :].strip()
+    return parse_basic_token(value)
 
 
 def now():
@@ -212,14 +236,33 @@ class Handler(SimpleHTTPRequestHandler):
         } or (self.path.startswith("/data/reports/") and self.path.endswith(".json"))
 
     def end_headers(self):
-        self.send_header("Access-Control-Allow-Origin", "*")
+        if WARDEN_CORS_ORIGIN:
+            self.send_header("Access-Control-Allow-Origin", WARDEN_CORS_ORIGIN)
         self.send_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
         if self.is_runtime_json_request():
             self.send_header("Cache-Control", "no-store, max-age=0")
             self.send_header("Pragma", "no-cache")
             self.send_header("Expires", "0")
         super().end_headers()
+
+    def is_authorized(self) -> bool:
+        if not WARDEN_API_TOKEN:
+            return True
+        authorization = self.headers.get("Authorization", "")
+        supplied = token_from_authorization(authorization)
+        supplied = supplied or self.headers.get("X-Warden-Token", "")
+        return secrets.compare_digest(supplied, WARDEN_API_TOKEN)
+
+    def require_authorized(self) -> bool:
+        if self.is_authorized():
+            return True
+        self.send_response(401)
+        self.send_header("WWW-Authenticate", 'Basic realm="Warden"')
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(json.dumps({"error": "Unauthorized"}).encode())
+        return False
 
     def do_OPTIONS(self):
         self.send_response(200)
@@ -231,6 +274,12 @@ class Handler(SimpleHTTPRequestHandler):
 
         if path == "/api/healthz":
             return self.respond(200, {"ok": True})
+
+        if self.is_runtime_json_request() and not self.require_authorized():
+            return
+
+        if path.startswith("/api/") and not self.require_authorized():
+            return
 
         job_match = re.fullmatch(f"/api/jobs/({API_ID_PATTERN})", path)
         if job_match:
@@ -288,6 +337,9 @@ class Handler(SimpleHTTPRequestHandler):
         return super().do_GET()
 
     def do_POST(self):
+        if not self.require_authorized():
+            return
+
         regenerate_match = re.fullmatch(
             r"/api/reports/([a-zA-Z0-9_.-]+)/regenerate", self.path
         )
@@ -300,6 +352,17 @@ class Handler(SimpleHTTPRequestHandler):
                 )
             except Exception:
                 body = {}
+
+            steering = str(body.get("steering", ""))
+            if len(steering.encode("utf-8")) > MAX_STEERING_BYTES:
+                return self.respond(
+                    413,
+                    {
+                        "error": "Steering text is too large",
+                        "code": "steering_too_large",
+                        "maxBytes": MAX_STEERING_BYTES,
+                    },
+                )
 
             report = load_report_by_id(report_id)
             if not isinstance(report, dict):
@@ -314,7 +377,7 @@ class Handler(SimpleHTTPRequestHandler):
 
             job = build_regeneration_job(
                 report,
-                steering=str(body.get("steering", "")),
+                steering=steering,
                 submitted_at=now(),
             )
 
@@ -511,6 +574,9 @@ class Handler(SimpleHTTPRequestHandler):
         return
 
     def do_DELETE(self):
+        if not self.require_authorized():
+            return
+
         queue_match = re.fullmatch(r"/api/queue/([a-zA-Z0-9_.-]+)", self.path)
         if queue_match:
             job_id = queue_match.group(1)

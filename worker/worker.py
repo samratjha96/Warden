@@ -13,6 +13,7 @@ Usage:
 import asyncio
 import json
 import os
+import shlex
 import shutil
 import sys
 import tempfile
@@ -25,11 +26,27 @@ from urllib.parse import urlparse
 import fcntl
 
 import subprocess
-from langchain_openai import ChatOpenAI
-from langchain_core.tools import tool
-from langchain_core.messages import HumanMessage, SystemMessage
-from langchain.agents import create_agent
-from report_contract import build_report, normalize_metadata, validate_markdown_report
+
+try:
+    from langchain_core.tools import tool
+except ModuleNotFoundError:
+    class LocalTool:
+        def __init__(self, func):
+            self.func = func
+
+        def __call__(self, *args, **kwargs):
+            return self.func(*args, **kwargs)
+
+        def invoke(self, args):
+            return self.func(**args)
+
+    def tool(func):
+        return LocalTool(func)
+
+try:
+    from report_contract import build_report, normalize_metadata, validate_markdown_report
+except ModuleNotFoundError:
+    from .report_contract import build_report, normalize_metadata, validate_markdown_report
 
 # Paths
 SCRIPT_DIR = Path(__file__).parent.absolute()
@@ -196,7 +213,33 @@ DANGEROUS_PATTERNS = [
     "mkfs",
     "dd if=",
     ":(){:|:&};:",
+    "env",
+    "printenv",
+    "/proc/self/environ",
+    "~/.ssh/",
+    "nc ",
+    "netcat",
+    "python -c",
+    "python3 -c",
+    "perl -e",
+    "ruby -e",
 ]
+ALLOWED_BASH_COMMANDS = {
+    "git",
+    "rg",
+    "grep",
+    "find",
+    "ls",
+    "sed",
+    "head",
+    "tail",
+    "wc",
+    "du",
+    "file",
+    "pwd",
+}
+SHELL_METACHARS = set("|&;<>()`$\n\r")
+ALLOWED_GREP_FLAGS = {"", "-i", "-n", "-l", "-il", "-li", "-in", "-ni"}
 
 
 def check_dangerous_command(command: str) -> str | None:
@@ -205,7 +248,46 @@ def check_dangerous_command(command: str) -> str | None:
     for pattern in DANGEROUS_PATTERNS:
         if pattern in normalized:
             return f"BLOCKED: Security policy blocks pattern '{pattern}'"
+    if any(char in command for char in SHELL_METACHARS):
+        return "BLOCKED: shell metacharacters are not allowed"
+    try:
+        args = shlex.split(command)
+    except ValueError as exc:
+        return f"BLOCKED: invalid command syntax: {exc}"
+    if not args:
+        return "BLOCKED: empty command"
+    if args[0] not in ALLOWED_BASH_COMMANDS:
+        return f"BLOCKED: command '{args[0]}' is not allowed"
     return None
+
+
+def command_args(command: str) -> list[str]:
+    return shlex.split(command)
+
+
+def _is_relative_to(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
+
+
+def allowed_roots(*, allow_reports: bool) -> list[Path]:
+    roots = [CLONE_BASE.resolve()]
+    if allow_reports:
+        roots.append(REPORTS_DIR.resolve())
+    return roots
+
+
+def resolve_allowed_path(path: str, *, allow_reports: bool = False) -> Path:
+    raw = Path(path)
+    candidate = raw if raw.is_absolute() else CLONE_BASE / raw
+    resolved = candidate.resolve()
+    roots = allowed_roots(allow_reports=allow_reports)
+    if any(_is_relative_to(resolved, root) for root in roots):
+        return resolved
+    raise ValueError(f"path is outside allowed analysis paths: {path}")
 
 
 @tool
@@ -221,8 +303,8 @@ def bash(command: str) -> str:
 
     try:
         result = subprocess.run(
-            command,
-            shell=True,
+            command_args(command),
+            shell=False,
             capture_output=True,
             text=True,
             timeout=120,
@@ -244,7 +326,8 @@ def read_file(path: str) -> str:
         path: Path to the file to read
     """
     try:
-        content = Path(path).read_text()
+        safe_path = resolve_allowed_path(path)
+        content = safe_path.read_text()
         return content[:100000] if len(content) > 100000 else content
     except Exception as e:
         return f"ERROR: {e}"
@@ -259,9 +342,10 @@ def write_file(path: str, content: str) -> str:
         content: Content to write to the file
     """
     try:
-        Path(path).parent.mkdir(parents=True, exist_ok=True)
-        Path(path).write_text(content)
-        return f"Successfully wrote {len(content)} bytes to {path}"
+        safe_path = resolve_allowed_path(path, allow_reports=True)
+        safe_path.parent.mkdir(parents=True, exist_ok=True)
+        safe_path.write_text(content)
+        return f"Successfully wrote {len(content)} bytes to {safe_path}"
     except Exception as e:
         return f"ERROR: {e}"
 
@@ -275,7 +359,8 @@ def glob_files(pattern: str, path: str = ".") -> str:
         path: Base path to search from
     """
     try:
-        matches = list(Path(path).glob(pattern))
+        safe_path = resolve_allowed_path(path)
+        matches = list(safe_path.glob(pattern))
         if not matches:
             return "No files found matching pattern"
         return "\n".join(str(m) for m in matches[:500])
@@ -293,11 +378,17 @@ def grep(pattern: str, path: str, flags: str = "") -> str:
         flags: Optional grep flags (e.g., "-i" for case-insensitive)
     """
     try:
-        cmd = f"grep -r {flags} '{pattern}' '{path}' 2>/dev/null | head -200"
+        flag_parts = shlex.split(flags) if flags else []
+        normalized_flags = "".join(flag_parts)
+        if normalized_flags not in ALLOWED_GREP_FLAGS:
+            return f"ERROR: unsupported grep flag: {flags}"
+        safe_path = resolve_allowed_path(path)
+        cmd = ["grep", "-r", *flag_parts, pattern, str(safe_path)]
         result = subprocess.run(
-            cmd, shell=True, capture_output=True, text=True, timeout=60
+            cmd, shell=False, capture_output=True, text=True, timeout=60
         )
-        return result.stdout if result.stdout else "No matches found"
+        lines = result.stdout.splitlines()
+        return "\n".join(lines[:200]) if lines else "No matches found"
     except Exception as e:
         return f"ERROR: {e}"
 
@@ -476,6 +567,10 @@ async def run_analysis(job: dict) -> bool:
     )
 
     try:
+        from langchain.agents import create_agent
+        from langchain_core.messages import HumanMessage
+        from langchain_openai import ChatOpenAI
+
         # Create LLM client using the configured gateway
         llm = ChatOpenAI(
             model=WORKER_CONFIG.model,

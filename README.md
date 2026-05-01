@@ -73,6 +73,19 @@ OPENAI_COMPATIBLE_ENDPOINT=https://your-endpoint.example/v1
 NVIDIA_API_KEY=your-api-key
 ```
 
+Optional hardening knobs:
+
+```dotenv
+# Require Authorization: Bearer <token>, X-Warden-Token, or Basic auth for API writes/reads.
+WARDEN_API_TOKEN=choose-a-long-random-token
+
+# Leave unset for same-origin browser use. Set only when a trusted cross-origin UI is required.
+WARDEN_CORS_ORIGIN=https://warden.example.com
+
+# Maximum regeneration steering size in bytes.
+MAX_STEERING_BYTES=2000
+```
+
 ### Start the app
 
 ```bash

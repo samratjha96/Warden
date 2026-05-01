@@ -38,22 +38,64 @@ Use these options to calibrate breadth and detail.
 - If `depth_option` is `deep`: maximize evidence depth, include higher volume of concrete file:line examples and attack-path reasoning.
 - If `severity_option` is `high` or `medium`: prioritize higher-risk findings first, but still report critical red flags even if below threshold logic elsewhere.
 
+## Project Classification and Enterprise Fit
+
+Do not grade before classifying what the repository is built to do. First identify the primary product shape and intended enterprise run mode:
+
+- library/SDK used inside another application
+- CLI or developer workstation tool
+- local-only single-user web UI
+- multi-user internal web service
+- browser/mobile/desktop extension or endpoint agent
+- hosted SaaS/server component
+- build, CI/CD, or deployment automation
+- security scanner or tool that intentionally handles untrusted code
+
+Then grade against that project type. Expected product behavior is not itself a finding. For example, a security scanner cloning untrusted repositories, a package manager running builds, or an LLM app sending prompts to a configured LLM endpoint may be core functionality. It becomes a finding only when the behavior is hidden, broader than documented, unsafe by default for the claimed run mode, lacks necessary containment, or creates an enterprise risk without a credible operator control.
+
+The primary enterprise go/no-go question is whether an end user can run the project without exposing the enterprise to hidden or enterprise-hostile behavior: undisclosed telemetry, covert exfiltration, surprise persistence, install-time host mutation, credential scraping, unexplained privileged behavior, counterfeit identity, or outbound data flows not required by the product. Mechanical hardening defects still matter, but do not confuse them with evidence that the project is malicious, spyware, or categorically unsafe to evaluate.
+
+Enterprise Runnable Standards:
+
+- Authenticity and purpose: the repo identity, maintainer claims, branding, and README must not mislead an enterprise evaluator.
+- Installation safety: installing or building the project must not execute surprising remote code, mutate host security settings, persist agents, or touch credentials outside the documented purpose.
+- Runtime containment: dangerous capabilities such as shell execution, filesystem writes, network egress, browser permissions, privileged containers, or untrusted-code handling must be necessary, explicit, and containable.
+- Data governance: the project must make data flows clear enough to decide whether source code, secrets, customer data, prompts, logs, or reports leave the enterprise boundary.
+- Access control fit: require authentication/authorization only when the run mode exposes a multi-user or network service. For local-only or lab tools, lack of built-in auth is a deployment note unless defaults expose the service beyond a trusted boundary.
+- Secrets handling: secrets must not be committed, logged, sent to unexpected endpoints, or required in places an ordinary enterprise deployment cannot protect.
+- Supply-chain integrity: dependencies, lockfiles, build sources, release artifacts, CI/CD workflows, and container images must be reviewable and reasonably pinned for the ecosystem.
+- Operational recoverability: enterprise users should be able to configure, monitor, constrain, update, and remove the tool without undocumented state or hidden persistence.
+- Vulnerability response: security reporting and maintainer responsiveness matter most when the tool will be broadly deployed, handles sensitive data, or becomes a dependency in production systems.
+
+Maturity signals are not automatic deployment blockers. A missing `SECURITY.md`, low stars, young age, no releases, or single-maintainer ownership is a governance signal. It should lower confidence or create a condition only when the repository is security-sensitive, broadly deployed, production-critical, or lacks another credible maintenance path. Do not turn every maturity gap into `conditional`.
+
+For end-user enterprise go/no-go decisions, separate:
+
+- `Inherent product risk`: risk caused by what the tool must do to provide its value.
+- `Implementation defect`: risk caused by unsafe code, unsafe defaults, or missing enforcement.
+- `Deployment requirement`: risk that can be handled by ordinary enterprise controls such as network isolation, SSO proxy, secrets manager, egress policy, resource limits, or retention policy.
+- `Governance/maturity concern`: provenance, maintainer, disclosure, release, or support concerns.
+- `Enterprise-hostile behavior`: hidden telemetry, covert exfiltration, persistence, credential theft, install-time mutation, impersonation, or other behavior that makes the project dangerous to run regardless of normal controls.
+
+Enterprise-hostile behavior should dominate the verdict. Implementation defects and unmanageable inherent product risks can justify `APPROVE WITH CONDITIONS` or `REJECT` when they create reachable high-impact risk. Deployment requirements should become approval conditions only when they are essential for the claimed enterprise run mode and cannot be assumed from normal deployment practice.
+
 ## Required Workflow
 
 1. Clone and inspect repository:
    - `git clone --depth 50 {url} {clone_path}`
-   - `cd {clone_path}`
-   - `git rev-parse HEAD`
+   - `git -C {clone_path} rev-parse HEAD`
+   - The shell tool is intentionally constrained: do not use `cd`, pipes, redirects, command substitution, or shell chaining. Use absolute paths, `git -C`, and the dedicated file/search tools instead.
 2. Collect repository trust stats and metadata:
    - {stats_instructions}
    - Also detect `SECURITY.md` presence and primary ecosystem.
-3. Detect package ecosystem(s) from indicator files and lockfiles.
-4. Use subagents for each major security surface before writing the final report.
-5. Execute the deep checklist below with concrete evidence.
-6. Build an enterprise risk register with exploitability, blast radius, and compensating controls for top risks.
-7. Write a markdown report to `{report_path}` using the output contract.
-8. Call `write_metadata` exactly once after writing markdown.
-9. Ensure markdown verdict/risk/scores are consistent with metadata verdict/risk/scores.
+3. Classify project type, intended users, and enterprise run mode before grading.
+4. Detect package ecosystem(s) from indicator files and lockfiles.
+5. Use subagents for each major security surface before writing the final report.
+6. Execute the deep checklist below with concrete evidence.
+7. Build an enterprise risk register with exploitability, blast radius, and compensating controls for top risks.
+8. Write a markdown report to `{report_path}` using the output contract.
+9. Call `write_metadata` exactly once after writing markdown.
+10. Ensure markdown verdict/risk/scores are consistent with metadata verdict/risk/scores.
 
 ## Subagent Orchestration
 
@@ -161,6 +203,7 @@ Write `## Executive Summary`, `## Policy Gate Finding` (what the project does an
 ### 1) Repository and Ecosystem Baseline
 
 - Detect all ecosystems present (Node, Python, Rust, Go, Java, Ruby, others).
+- Classify the project type, intended users, and likely enterprise run mode before assessing severity.
 - Identify package manager/lockfile state and pinning quality.
 - Record analyzed commit and major entrypoints (CLI, server, extension, build scripts).
 - Identify runtime trust boundaries (user input, network ingress, plugin/script inputs).
@@ -173,6 +216,7 @@ Write `## Executive Summary`, `## Policy Gate Finding` (what the project does an
 - Classify endpoints as expected, unknown, suspicious, or high-risk.
 - Highlight undocumented outbound connections.
 - Flag clear command-and-control or covert exfiltration patterns.
+- Treat documented, user-configured endpoints required for the product's core purpose as expected data flows, not telemetry. Examples: a repository scanner cloning a submitted repo, an LLM app sending prompts to the configured LLM endpoint, or a package tool fetching package metadata. Still state what data leaves the enterprise boundary and who controls the destination.
 
 ### 3) Telemetry, Analytics, and Tracking
 
@@ -180,6 +224,7 @@ Write `## Executive Summary`, `## Policy Gate Finding` (what the project does an
 - Determine what events/data are collected if inferable from code.
 - Flag undisclosed, always-on, or hard-to-disable telemetry.
 - Highlight whether telemetry is opt-in, opt-out, or mandatory.
+- Do not label core functional API calls as telemetry. Telemetry means product/usage analytics, tracking, diagnostics, crash reporting, or other observation of the user/tool beyond the user-requested function.
 
 ### 4) Data Collection and Privacy Risk
 
@@ -187,6 +232,7 @@ Write `## Executive Summary`, `## Policy Gate Finding` (what the project does an
 - Check for fingerprinting patterns (device/browser/canvas/audio/font/timezone).
 - Flag potential exfiltration or over-collection patterns.
 - Identify handling of secrets and personal/sensitive data in logs and crash paths.
+- Separate disclosed product data flow from hidden collection. If source code, prompts, logs, or reports are sent only to an operator-configured service required for the tool to work, describe it as a data governance requirement. Escalate only if the destination is hardcoded, undocumented, broader than required, hard to disable, or mismatched with user expectations.
 
 ### 5) Code Safety and Suspicious Patterns
 
@@ -238,9 +284,9 @@ Write `## Executive Summary`, `## Policy Gate Finding` (what the project does an
 - Note suspicious maintenance patterns when visible from available metadata.
 - Flag release-process anti-patterns (force-push release tags, unverifiable release assets).
 - Inspect commit history for integrity signals: suspiciously short history on a claimed-mature project, all commits from a single new account claiming to represent an org, bulk commits landing in a very short window suggesting a content dump rather than organic development, or force-pushed tags that erase release history.
-- Flag last meaningful commit > 18 months on a security-relevant dependency path.
-- Flag unaddressed open CVEs or security issues > 6 months old.
-- Flag single-maintainer bus-factor risk with no successor or org-level ownership signal.
+- Flag last meaningful commit > 18 months on a security-relevant dependency path, especially if the repo is a production dependency or endpoint tool.
+- Flag unaddressed open CVEs or security issues > 6 months old when they affect reachable functionality.
+- Flag single-maintainer bus-factor risk with no successor or org-level ownership signal as a governance concern. Escalate it to a deployment condition only when the enterprise would depend on upstream support for production safety.
 - If the codebase appears fully AI-generated (no organic issue history, no real contributors, uniform AI prose throughout all commits and comments, no evidence the author understands the security behavior of the published code), flag it explicitly — AI-generated code introduces provenance uncertainty independent of the code's apparent quality.
 - If the maintainer org, email domain, or contact information can be associated with an OFAC-sanctioned jurisdiction (Iran, North Korea, Russia, Belarus, Syria, Cuba), flag it as a mandatory compliance callout that legal and procurement must clear before enterprise use. Do not silently omit this.
 
@@ -317,10 +363,23 @@ For each triggered red flag: include evidence, impact, confidence, and recommend
 Use an enterprise deployment gate mindset:
 
 - Recommendation should prioritize organizational risk over developer convenience.
+- Lead with whether the project is safe for an enterprise end user to run from a trust/privacy standpoint: no hidden telemetry, no covert exfiltration, no surprise persistence, no install-time host mutation, no credential scraping, and no deceptive identity.
+- Calibrate the decision to the classified project type and enterprise run mode.
+- Do not punish a repository for honestly documented capabilities that are necessary for its purpose; grade whether those capabilities are constrained, reviewable, and deployable under normal enterprise controls.
+- Do not make common operational controls such as SSO proxy, network allowlisting, secrets management, resource limits, log retention, or vulnerability monitoring into blocking conditions unless the repo's defaults or claims make them unusually necessary.
+- Treat normal enterprise data governance approvals for a disclosed, configurable LLM/API endpoint as a note or requirement, not as evidence of telemetry or malicious exfiltration.
+- Mechanical hardening findings such as missing authentication, missing CSP, weak command filtering, mutable container tags, or missing resource limits should be framed as fixable deployment/code risks. They should not turn an otherwise transparent local/internal tool into `REJECT` unless they enable realistic compromise under the intended run mode and lack practical mitigations.
+- Treat missing docs, missing `SECURITY.md`, low popularity, no releases, and single-maintainer ownership as confidence and governance factors, not standalone reasons for `conditional`.
 - Evaluate exploitability, blast radius, and detectability for high-risk findings.
 - Explicitly state compensating controls if recommending `APPROVE WITH CONDITIONS`.
 - If severe findings lack credible compensating controls, recommend `REJECT`.
 - If critical data is unknown for a high-impact area, default to conservative outcome (`APPROVE WITH CONDITIONS` or `REJECT`) and list required validation.
+
+Verdict calibration:
+
+- `APPROVE`: no material hidden behavior, trust-destroying red flags, reachable high-impact defects, or unusual deployment requirements for the classified run mode. Expected and documented data flows, including operator-configured LLM/API calls, are acceptable when clearly disclosed and controllable. Minor maturity gaps and ordinary hardening work may be noted without conditions.
+- `APPROVE WITH CONDITIONS`: the project is usable for enterprise evaluation or deployment only if specific, testable controls are applied because of reachable risks, unsafe defaults, sensitive data handling, privileged capabilities, or unresolved high-impact unknowns. Use this for fixable hardening issues that materially matter under the assumed run mode, not merely because normal enterprise controls are expected.
+- `REJECT`: confirmed malicious behavior, credible impersonation, policy-gated purpose, hidden exfiltration, unsafe install-time execution, uncontained privileged behavior, severe vulnerabilities without practical mitigation, or claims materially contradicted by code.
 
 ## Markdown Output Contract
 
@@ -332,6 +391,7 @@ Use concise sections when a surface area is not applicable; mark as `Not Applica
 - `## Executive Summary`
   - Overall recommendation: `APPROVE`, `APPROVE WITH CONDITIONS`, or `REJECT`
   - Overall risk: `LOW`, `MEDIUM`, or `HIGH`
+  - Project classification and assumed enterprise run mode
   - 3-5 most important findings
 - `## Detailed Findings`
   - Organize by risk category from the checklist above.
