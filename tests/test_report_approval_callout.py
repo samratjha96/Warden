@@ -12,6 +12,11 @@ class ReportApprovalCalloutTests(unittest.TestCase):
         html = Path("site/report.html").read_text()
         self.assertIn("App.renderApprovalConditionsCallout(report)", html)
 
+    def test_report_page_sanitizes_markdown_before_inner_html(self):
+        html = Path("site/report.html").read_text()
+        self.assertIn("DOMPurify.sanitize", html)
+        self.assertIn("marked.parse(content)", html)
+
     def test_styles_include_approval_callout(self):
         css = Path("site/css/brutal.css").read_text()
         self.assertIn(".approval-callout", css)
